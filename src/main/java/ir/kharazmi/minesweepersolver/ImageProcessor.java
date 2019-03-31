@@ -87,7 +87,8 @@ class ImageProcessor {
     void startGame() {
         try {
             process = Runtime.getRuntime().exec("resources\\game.exe");
-        } catch (IOException ignored) {
+            Thread.sleep(1000);
+        } catch (IOException | InterruptedException ignored) {
         }
     }
 
@@ -107,29 +108,45 @@ class ImageProcessor {
     void updateBoard() {
         Mat gameBoard = getScreenshot();
 
-        ArrayList<Integer[]> unknownTileLocations = match(gameBoard, unknownTile, null);
-        ArrayList<Integer[]> emptyTileLocations = match(gameBoard, emptyTile, null);
-        ArrayList<Integer[]> flagTileLocations = match(gameBoard, flagTile, null);
-        ArrayList<Integer[]> oneTileLocations = match(gameBoard, oneTile, null);
-        ArrayList<Integer[]> twoTileLocations = match(gameBoard, twoTile, null);
-        ArrayList<Integer[]> threeTileLocations = match(gameBoard, threeTile, null);
-        ArrayList<Integer[]> fourTileLocations = match(gameBoard, fourTile, null);
-        ArrayList<Integer[]> fiveTileLocations = match(gameBoard, fiveTile, null);
-        ArrayList<Integer[]> sixTileLocations = match(gameBoard, sixTile, null);
-        ArrayList<Integer[]> sevenTileLocations = match(gameBoard, sevenTile, null);
-        ArrayList<Integer[]> eightTileLocations = match(gameBoard, eightTile, null);
+        Thread unknownTileThread = new Thread(() -> updateBoard(match(gameBoard, unknownTile, null), -1));
+        Thread emptyTileThread = new Thread(() -> updateBoard(match(gameBoard, emptyTile, null), 0));
+        Thread flagTileThread = new Thread(() -> updateBoard(match(gameBoard, flagTile, null), -2));
+        Thread oneTileThread = new Thread(() -> updateBoard(match(gameBoard, oneTile, null), 1));
+        Thread twoTileThread = new Thread(() -> updateBoard(match(gameBoard, twoTile, null), 2));
+        Thread threeTileThread = new Thread(() -> updateBoard(match(gameBoard, threeTile, null), 3));
+        Thread fourTileThread = new Thread(() -> updateBoard(match(gameBoard, fourTile, null), 4));
+        Thread fiveTileThread = new Thread(() -> updateBoard(match(gameBoard, fiveTile, null), 5));
+        Thread sixTileThread = new Thread(() -> updateBoard(match(gameBoard, sixTile, null), 6));
+        Thread sevenTileThread = new Thread(() -> updateBoard(match(gameBoard, sevenTile, null), 7));
+        Thread eightTileThread = new Thread(() -> updateBoard(match(gameBoard, eightTile, null), 8));
 
-        updateBoard(flagTileLocations, -2);
-        updateBoard(unknownTileLocations, -1);
-        updateBoard(emptyTileLocations, 0);
-        updateBoard(oneTileLocations, 1);
-        updateBoard(twoTileLocations, 2);
-        updateBoard(threeTileLocations, 3);
-        updateBoard(fourTileLocations, 4);
-        updateBoard(fiveTileLocations, 5);
-        updateBoard(sixTileLocations, 6);
-        updateBoard(sevenTileLocations, 7);
-        updateBoard(eightTileLocations, 8);
+        unknownTileThread.start();
+        emptyTileThread.start();
+        flagTileThread.start();
+        oneTileThread.start();
+        twoTileThread.start();
+        threeTileThread.start();
+        fourTileThread.start();
+        fiveTileThread.start();
+        sixTileThread.start();
+        sevenTileThread.start();
+        eightTileThread.start();
+
+        try {
+            unknownTileThread.join();
+            emptyTileThread.join();
+            flagTileThread.join();
+            oneTileThread.join();
+            twoTileThread.join();
+            threeTileThread.join();
+            fourTileThread.join();
+            fiveTileThread.join();
+            sixTileThread.join();
+            sevenTileThread.join();
+            eightTileThread.join();
+        } catch (InterruptedException ignored) {
+            throw new RuntimeException("update board interrupted");
+        }
     }
 
     private void updateBoard(ArrayList<Integer[]> tileLocations, int state) {
@@ -192,7 +209,8 @@ class ImageProcessor {
         return locations;
     }
 
-    private ArrayList<Integer[]> extendLocations(ArrayList<Integer[]> newLocations, ArrayList<Integer[]> oldLocations) {
+    private ArrayList<Integer[]> extendLocations(ArrayList<Integer[]> newLocations, ArrayList<Integer[]>
+            oldLocations) {
         ArrayList<Integer[]> result = new ArrayList<>(oldLocations);
         for (Integer[] newLocation : newLocations) {
             boolean exist = false;
@@ -246,12 +264,10 @@ class ImageProcessor {
         Integer[] gameLocationBR = null;
 
         try {
-            Thread.sleep(1000);
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
             BufferedImage image = new Robot().createScreenCapture(new Rectangle(screenSize));
             ImageIO.write(image, "png", new File("resources\\game.png"));
-            Thread.sleep(500);
-        } catch (IOException | AWTException | InterruptedException ignored) {
+        } catch (IOException | AWTException ignored) {
         }
 
         Mat gameBoard = Imgcodecs.imread("resources\\game.png");
