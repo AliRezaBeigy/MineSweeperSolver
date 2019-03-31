@@ -120,5 +120,14 @@ public class Operation {
         return false;
     }
 
+    int clickable() {
+        int sum = 0;
+        for (int i = 0; i < width; i++)
+            for (int j = 0; j < height; j++)
+                if (click[i][j])
+                    sum++;
+        return sum;
+    }
+
     //TODO void update table
 }
