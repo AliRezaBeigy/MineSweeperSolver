@@ -37,8 +37,8 @@ class ImageProcessor {
     private Tile[][] board;
     private Integer[] gameLocationTL;
 
-    private int TileWidth;
-    private int TileHeight;
+    int TileWidth;
+    int TileHeight;
 
     void init() {
         unknownTile = getTemplates("unknown");
@@ -164,6 +164,23 @@ class ImageProcessor {
 
     Tile[][] getBoard() {
         return board;
+    }
+
+    int getWidth(){
+        return board.length;
+    }
+
+    int getHeight(){
+        return board[0].length;
+    }
+
+    int[][] getTable(){
+        int n = getWidth(), m = getHeight();
+        int[][] ret = new int[n][m];
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++)
+                ret[i][j] = board[i][j].getState();
+        return ret;
     }
 
     Process getProcess() {
