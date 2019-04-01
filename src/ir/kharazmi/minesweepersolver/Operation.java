@@ -79,19 +79,19 @@ public class Operation {
         if (x > 0 && y > 0 && table[x - 1][y - 1] == -1)
             click[x - 1][y - 1] = true;
         if (y > 0 && table[x][y - 1] == -1)
-            click[x - 1][y - 1] = true;
+            click[x][y - 1] = true;
         if (x > 0 && table[x - 1][y] == -1)
-            click[x - 1][y - 1] = true;
+            click[x - 1][y] = true;
         if (x < width - 1 && y > 0 && table[x + 1][y - 1] == -1)
-            click[x - 1][y - 1] = true;
+            click[x + 1][y - 1] = true;
         if (x > 0 && y < height - 1 && table[x - 1][y + 1] == -1)
-            click[x - 1][y - 1] = true;
+            click[x - 1][y + 1] = true;
         if (y < height - 1 && table[x][y + 1] == -1)
-            click[x - 1][y - 1] = true;
+            click[x][y + 1] = true;
         if (x < width - 1 && table[x + 1][y] == -1)
-            click[x - 1][y - 1] = true;
+            click[x + 1][y] = true;
         if (x < width - 1 && y < height - 1 && table[x + 1][y + 1] == -1)
-            click[x - 1][y - 1] = true;
+            click[x + 1][y + 1] = true;
     }
 
     void mineFinder() {
