@@ -12,7 +12,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 class ImageProcessor {
@@ -35,7 +34,7 @@ class ImageProcessor {
     private List<Template> eightTile;
 
     private Tile[][] board;
-    private Integer[] gameLocationTL;
+    private Location gameLocationTL;
 
     private int TileWidth;
     private int TileHeight;
@@ -55,21 +54,31 @@ class ImageProcessor {
 
         Mat gameBoard = getScreenshot();
 
-        ArrayList<Integer[]> boarder_locations = match(gameBoard, unknownTile, Color.red);
+        ArrayList<Location> boarder_locations = match(gameBoard, unknownTile, Color.red);
+
+        ArrayList<Location> locations = new ArrayList<>();
+        for (Location boarder_location : boarder_locations) {
+            boolean exist = false;
+            for (Location approximateLocation : getApproximateLocations(boarder_location, 2))
+                if (boarder_locations.contains(approximateLocation) && !approximateLocation.equals(boarder_location))
+                    exist = true;
+            if (!exist)
+                locations.add(boarder_location);
+        }
 
         int w = 0;
         int h = 0;
-        int temp = boarder_locations.get(0)[0];
-        for (Integer[] item : boarder_locations) {
-            if (item[0] == temp)
+        int temp = locations.get(0).getX();
+        for (Location item : locations) {
+            if (item.getX() == temp)
                 w += 1;
             else
                 break;
         }
-        temp = boarder_locations.get(0)[1];
-        for (int i = 0; i < boarder_locations.size(); i += w) {
-            Integer[] item = boarder_locations.get(i);
-            if (item[1] == temp)
+        temp = locations.get(0).getY();
+        for (int i = 0; i < locations.size(); i += w) {
+            Location item = locations.get(i);
+            if (item.getY() == temp)
                 h += 1;
             else
                 break;
@@ -77,11 +86,13 @@ class ImageProcessor {
 
         board = new Tile[w][h];
         for (int i = 0; i < w; i++)
-            for (int j = 0; j < h; j++)
-                board[i][j] = new Tile(-1, boarder_locations.get(i + (j * w)));
+            for (int j = 0; j < h; j++) {
+                Location location = locations.get(i + (j * w));
+                board[i][j] = new Tile(-1, new Location(location.getX(), location.getY()));
+            }
 
-        TileWidth = board[0][1].getLocation()[0] - board[0][0].getLocation()[0];
-        TileHeight = board[1][0].getLocation()[1] - board[0][0].getLocation()[1];
+        TileWidth = board[0][1].getLocation().getX() - board[0][0].getLocation().getX();
+        TileHeight = board[1][0].getLocation().getY() - board[0][0].getLocation().getY();
     }
 
     void startGame() {
@@ -95,8 +106,8 @@ class ImageProcessor {
     void click(int x, int y) {
         try {
             Robot bot = new Robot();
-            Integer[] tileLocation = board[x][y].getLocation();
-            bot.mouseMove(tileLocation[0] + gameLocationTL[0] + (TileWidth / 2), tileLocation[1] + gameLocationTL[1] + (TileHeight / 2));
+            Location tileLocation = board[x][y].getLocation();
+            bot.mouseMove(tileLocation.getX() + gameLocationTL.getX() + (TileWidth / 2), tileLocation.getY() + gameLocationTL.getY() + (TileHeight / 2));
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
@@ -149,13 +160,13 @@ class ImageProcessor {
         }
     }
 
-    private void updateBoard(ArrayList<Integer[]> tileLocations, int state) {
-        for (Integer[] tileLocation : tileLocations) {
+    private void updateBoard(ArrayList<Location> tileLocations, int state) {
+        for (Location tileLocation : tileLocations) {
             TileLoop:
-            for (Integer[] approximateLocation : getApproximateLocations(tileLocation, 2))
+            for (Location approximateLocation : getApproximateLocations(tileLocation, 2))
                 for (Tile[] yTiles : board)
                     for (Tile tile : yTiles)
-                        if (Arrays.equals(approximateLocation, tile.getLocation())) {
+                        if (approximateLocation.equals(tile.getLocation())) {
                             tile.setState(state);
                             break TileLoop;
                         }
@@ -196,28 +207,28 @@ class ImageProcessor {
         return result;
     }
 
-    private ArrayList<Integer[]> getApproximateLocations(Integer[] location, int accuracy) {
-        int i = location[0];
-        int j = location[1];
+    private ArrayList<Location> getApproximateLocations(Location location, int accuracy) {
+        int i = location.getX();
+        int j = location.getY();
 
-        ArrayList<Integer[]> locations = new ArrayList<>();
+        ArrayList<Location> locations = new ArrayList<>();
 
         for (int w = -1 * accuracy; w < accuracy; w++)
             for (int h = -1 * accuracy; h < accuracy; h++)
-                locations.add(new Integer[]{i + w, j + h});
+                locations.add(new Location(i + w, j + h));
 
         return locations;
     }
 
-    private ArrayList<Integer[]> extendLocations(ArrayList<Integer[]> newLocations, ArrayList<Integer[]>
+    private ArrayList<Location> extendLocations(ArrayList<Location> newLocations, ArrayList<Location>
             oldLocations) {
-        ArrayList<Integer[]> result = new ArrayList<>(oldLocations);
-        for (Integer[] newLocation : newLocations) {
+        ArrayList<Location> result = new ArrayList<>(oldLocations);
+        for (Location newLocation : newLocations) {
             boolean exist = false;
             OldLocation:
-            for (Integer[] oldLocation : oldLocations)
-                for (Integer[] approximateLocation : getApproximateLocations(oldLocation, 2))
-                    if (Arrays.equals(newLocation, approximateLocation)) {
+            for (Location oldLocation : oldLocations)
+                for (Location approximateLocation : getApproximateLocations(oldLocation, 2))
+                    if (newLocation.equals(approximateLocation)) {
                         exist = true;
                         break OldLocation;
                     }
@@ -227,14 +238,14 @@ class ImageProcessor {
         return result;
     }
 
-    private ArrayList<Integer[]> match(Mat src, List<Template> templates, Color color) {
-        ArrayList<Integer[]> result = new ArrayList<>();
+    private ArrayList<Location> match(Mat src, List<Template> templates, Color color) {
+        ArrayList<Location> result = new ArrayList<>();
         for (Template template : templates)
             result = extendLocations(result, match(src, template, color));
         return result;
     }
 
-    private ArrayList<Integer[]> match(Mat src, Template template, Color color) {
+    private ArrayList<Location> match(Mat src, Template template, Color color) {
         Mat srcGray = new Mat();
         Mat templateGray = new Mat();
         Imgproc.cvtColor(src, srcGray, Imgproc.COLOR_BGR2GRAY);
@@ -242,12 +253,12 @@ class ImageProcessor {
         Mat res = new Mat();
         Imgproc.matchTemplate(srcGray, templateGray, res, Imgproc.TM_CCOEFF_NORMED);
 
-        ArrayList<Integer[]> locations = new ArrayList<>();
+        ArrayList<Location> locations = new ArrayList<>();
 
         for (int i = 0; i < res.width(); i++)
             for (int j = 0; j < res.height(); j++) {
                 if (res.get(j, i)[0] >= template.getThreshold()) {
-                    locations.add(new Integer[]{i, j});
+                    locations.add(new Location(i, j));
                     if (color != null)
                         Imgproc.circle(src
                                 , new Point(i + new Float(template.getTelmplate().width() / 2f).intValue()
@@ -261,7 +272,7 @@ class ImageProcessor {
 
     private Mat getScreenshot() {
         gameLocationTL = null;
-        Integer[] gameLocationBR = null;
+        Location gameLocationBR = null;
 
         try {
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -277,12 +288,14 @@ class ImageProcessor {
             for (int j = 0; j < rangeMat.height(); j++)
                 if (!isZero(rangeMat, i, j, 5))
                     if (gameLocationTL == null)
-                        gameLocationTL = new Integer[]{i, j};
+                        gameLocationTL = new Location(i, j);
                     else
-                        gameLocationBR = new Integer[]{i, j};
+                        gameLocationBR = new Location(i, j);
         if (gameLocationBR == null || gameLocationTL == null)
             throw new RuntimeException("I can't detect game :(");
-        gameBoard = new Mat(gameBoard, new Rect(gameLocationTL[0], gameLocationTL[1], gameLocationBR[0] - gameLocationTL[0], gameLocationBR[1] - gameLocationTL[1]));
+        gameBoard = new Mat(gameBoard, new Rect(gameLocationTL.getX(), gameLocationTL.getY()
+                , gameLocationBR.getX() - gameLocationTL.getX()
+                , gameLocationBR.getY() - gameLocationTL.getY()));
         return gameBoard;
     }
 }

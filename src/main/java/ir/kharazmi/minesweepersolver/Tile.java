@@ -2,9 +2,9 @@ package ir.kharazmi.minesweepersolver;
 
 class Tile {
     private int state;
-    private Integer[] location;
+    private Location location;
 
-    Tile(int state, Integer[] location) {
+    Tile(int state, Location location) {
         this.state = state;
         this.location = location;
     }
@@ -17,7 +17,7 @@ class Tile {
         this.state = state;
     }
 
-    Integer[] getLocation() {
+    Location getLocation() {
         return location;
     }
 }
