@@ -9,6 +9,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,8 +20,9 @@ class ImageProcessor {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
+    int TileWidth;
+    int TileHeight;
     private Process process;
-
     private List<Template> unknownTile;
     private List<Template> emptyTile;
     private List<Template> flagTile;
@@ -32,12 +34,8 @@ class ImageProcessor {
     private List<Template> sixTile;
     private List<Template> sevenTile;
     private List<Template> eightTile;
-
     private Tile[][] board;
     private Location gameLocationTL;
-
-    int TileWidth;
-    int TileHeight;
 
     void init() {
         unknownTile = getTemplates("unknown");
@@ -53,13 +51,13 @@ class ImageProcessor {
         eightTile = getTemplates("eight");
 
         Mat gameBoard = getScreenshot();
-
+        Image test = toBufferedImage(gameBoard);
         ArrayList<Location> boarder_locations = match(gameBoard, unknownTile, Color.red);
 
         ArrayList<Location> locations = new ArrayList<>();
         for (Location boarder_location : boarder_locations) {
             boolean exist = false;
-            for (Location approximateLocation : getApproximateLocations(boarder_location, 2))
+            for (Location approximateLocation : getApproximateLocations(boarder_location, 1))
                 if (boarder_locations.contains(approximateLocation) && !approximateLocation.equals(boarder_location))
                     exist = true;
             if (!exist)
@@ -93,6 +91,21 @@ class ImageProcessor {
 
         TileWidth = board[0][1].getLocation().getX() - board[0][0].getLocation().getX();
         TileHeight = board[1][0].getLocation().getY() - board[0][0].getLocation().getY();
+    }
+
+    public Image toBufferedImage(Mat m) {
+        int type = BufferedImage.TYPE_BYTE_GRAY;
+        if (m.channels() > 1) {
+            type = BufferedImage.TYPE_3BYTE_BGR;
+        }
+        int bufferSize = m.channels() * m.cols() * m.rows();
+        byte[] b = new byte[bufferSize];
+        m.get(0, 0, b); // get all the pixels
+        BufferedImage image = new BufferedImage(m.cols(), m.rows(), type);
+        final byte[] targetPixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+        System.arraycopy(b, 0, targetPixels, 0, b.length);
+        return image;
+
     }
 
     void startGame() {
@@ -177,15 +190,15 @@ class ImageProcessor {
         return board;
     }
 
-    int getWidth(){
+    int getWidth() {
         return board.length;
     }
 
-    int getHeight(){
+    int getHeight() {
         return board[0].length;
     }
 
-    int[][] getTable(){
+    int[][] getTable() {
         int n = getWidth(), m = getHeight();
         int[][] ret = new int[n][m];
         for (int i = 0; i < n; i++)

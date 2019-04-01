@@ -9,6 +9,7 @@ public class Operation {
         this.width = width;
         this.height = height;
         this.table = new int[width][height];
+        this.click = new boolean[width][height];
         for (int i = 0; i < width; i++)
             System.arraycopy(table[i], 0, this.table[i], 0, height);
     }
@@ -34,7 +35,7 @@ public class Operation {
         return ret;
     }
 
-    int getAdjClick(int x, int y){
+    int getAdjClick(int x, int y) {
         int ret = 0;
         if (x > 0 && y > 0 && click[x - 1][y - 1])
             ret++;
@@ -129,5 +130,12 @@ public class Operation {
         return sum;
     }
 
-    //TODO void update table
+    void update(ImageProcessor imageProcessor) {
+        int[][] t = imageProcessor.getTable();
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                table[i][j] = t[i][j];
+            }
+        }
+    }
 }

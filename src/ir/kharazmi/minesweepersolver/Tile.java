@@ -1,6 +1,6 @@
 package ir.kharazmi.minesweepersolver;
 
-class Tile {
+public class Tile {
     private int state;
     private Location location;
 
