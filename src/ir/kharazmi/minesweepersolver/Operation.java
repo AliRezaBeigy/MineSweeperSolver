@@ -97,9 +97,9 @@ public class Operation {
     void mineFinder() {
         for (int i = 0; i < width; i++)
             for (int j = 0; j < height; j++)
-                if (table[i][j] > 0 && getAdj(i, j, -1) > 0 &&
-                        getAdj(i, j, -1) + getAdj(i, j, -2) == table[i][j])
+                if (table[i][j] > 0 && getAdj(i, j, -1) > 0 && getAdj(i, j, -1) + getAdj(i, j, -2) == table[i][j])
                     setAdj(i, j, -1, -2);
+
     }
 
     void clickFinder() {

@@ -23,6 +23,7 @@ class ImageProcessor {
     int TileWidth;
     int TileHeight;
     private Process process;
+    private List<Template> resetTile;
     private List<Template> unknownTile;
     private List<Template> emptyTile;
     private List<Template> flagTile;
@@ -38,6 +39,7 @@ class ImageProcessor {
     private Location gameLocationTL;
 
     void init() {
+        resetTile = getTemplates("reset");
         unknownTile = getTemplates("unknown");
         emptyTile = getTemplates("empty");
         flagTile = getTemplates("flag");
@@ -51,7 +53,6 @@ class ImageProcessor {
         eightTile = getTemplates("eight");
 
         Mat gameBoard = getScreenshot();
-        Image test = toBufferedImage(gameBoard);
         ArrayList<Location> boarder_locations = match(gameBoard, unknownTile, Color.red);
 
         ArrayList<Location> locations = new ArrayList<>();
@@ -64,20 +65,20 @@ class ImageProcessor {
                 locations.add(boarder_location);
         }
 
-        int w = 0;
         int h = 0;
+        int w = 0;
         int temp = locations.get(0).getX();
         for (Location item : locations) {
             if (item.getX() == temp)
-                w += 1;
+                h += 1;
             else
                 break;
         }
         temp = locations.get(0).getY();
-        for (int i = 0; i < locations.size(); i += w) {
+        for (int i = 0; i < locations.size(); i += h) {
             Location item = locations.get(i);
             if (item.getY() == temp)
-                h += 1;
+                w += 1;
             else
                 break;
         }
@@ -85,12 +86,12 @@ class ImageProcessor {
         board = new Tile[w][h];
         for (int i = 0; i < w; i++)
             for (int j = 0; j < h; j++) {
-                Location location = locations.get(i + (j * w));
+                Location location = locations.get(j + (i * h));
                 board[i][j] = new Tile(-1, new Location(location.getX(), location.getY()));
             }
 
-        TileWidth = board[0][1].getLocation().getX() - board[0][0].getLocation().getX();
-        TileHeight = board[1][0].getLocation().getY() - board[0][0].getLocation().getY();
+        TileWidth = board[1][0].getLocation().getX() - board[0][0].getLocation().getX();
+        TileHeight = board[0][1].getLocation().getY() - board[0][0].getLocation().getY();
     }
 
     public Image toBufferedImage(Mat m) {
@@ -116,6 +117,21 @@ class ImageProcessor {
         }
     }
 
+    void reset() {
+        ArrayList<Location> reset_locations = match(getScreenshot(), resetTile, Color.red);
+        try {
+            Robot bot = new Robot();
+            bot.mouseMove(reset_locations.get(0).getX() + gameLocationTL.getX() + (TileWidth / 2), reset_locations.get(0).getY() + gameLocationTL.getY() + (TileHeight / 2));
+            bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+            bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+            bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+            bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+            updateBoard();
+        } catch (AWTException e) {
+            e.printStackTrace();
+        }
+    }
+
     void click(int x, int y) {
         try {
             Robot bot = new Robot();
@@ -125,6 +141,21 @@ class ImageProcessor {
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+            updateBoard();
+        } catch (AWTException ignored) {
+        }
+    }
+
+    void flag(int x, int y) {
+        try {
+            Robot bot = new Robot();
+            Location tileLocation = board[x][y].getLocation();
+            bot.mouseMove(tileLocation.getX() + gameLocationTL.getX() + (TileWidth / 2), tileLocation.getY() + gameLocationTL.getY() + (TileHeight / 2));
+            bot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
+            bot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
+            bot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
+            bot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
+            updateBoard();
         } catch (AWTException ignored) {
         }
     }

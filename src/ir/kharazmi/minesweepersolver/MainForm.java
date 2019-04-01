@@ -9,6 +9,7 @@ public class MainForm {
     private JTextField xField;
     private JTextField yField;
     private JButton clickButton;
+    private JButton resetGameButton;
 
     MainForm(ImageProcessor imageProcessor) {
         JFrame jFrame = new JFrame();
@@ -31,8 +32,10 @@ public class MainForm {
         });
 
         clickButton.addActionListener(e -> {
-            imageProcessor.click(Integer.parseInt(xField.getText()), Integer.parseInt(yField.getText()));
+            imageProcessor.flag(Integer.parseInt(xField.getText()), Integer.parseInt(yField.getText()));
         });
+
+        resetGameButton.addActionListener(e -> imageProcessor.reset());
 
         StringBuilder result = new StringBuilder();
         Tile[][] board = imageProcessor.getBoard();
