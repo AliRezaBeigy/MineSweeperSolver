@@ -60,19 +60,19 @@ public class Operation {
         if (x > 0 && y > 0 && table[x - 1][y - 1] == val)
             table[x - 1][y - 1] = setVal;
         if (y > 0 && table[x][y - 1] == val)
-            table[x - 1][y - 1] = setVal;
+            table[x][y - 1] = setVal;
         if (x > 0 && table[x - 1][y] == val)
-            table[x - 1][y - 1] = setVal;
+            table[x - 1][y] = setVal;
         if (x < width - 1 && y > 0 && table[x + 1][y - 1] == val)
-            table[x - 1][y - 1] = setVal;
+            table[x + 1][y - 1] = setVal;
         if (x > 0 && y < height - 1 && table[x - 1][y + 1] == val)
-            table[x - 1][y - 1] = setVal;
+            table[x - 1][y + 1] = setVal;
         if (y < height - 1 && table[x][y + 1] == val)
-            table[x - 1][y - 1] = setVal;
+            table[x][y + 1] = setVal;
         if (x < width - 1 && table[x + 1][y] == val)
-            table[x - 1][y - 1] = setVal;
+            table[x + 1][y] = setVal;
         if (x < width - 1 && y < height - 1 && table[x + 1][y + 1] == val)
-            table[x - 1][y - 1] = setVal;
+            table[x + 1][y + 1] = setVal;
     }
 
     void clickAdj(int x, int y) {
@@ -131,6 +131,7 @@ public class Operation {
     }
 
     void update(ImageProcessor imageProcessor) {
+        imageProcessor.updateBoard();
         int[][] t = imageProcessor.getTable();
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
