@@ -1,5 +1,8 @@
 package ir.kharazmi.minesweepersolver;
 
+import com.sun.jna.platform.win32.User32;
+import com.sun.jna.platform.win32.WinDef;
+import com.sun.jna.ptr.IntByReference;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -9,8 +12,11 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +26,7 @@ class ImageProcessor {
     }
 
     private Process process;
+    private WinDef.HWND gameHwnd;
 
     private List<Template> unknownTile;
     private List<Template> emptyTile;
@@ -35,6 +42,7 @@ class ImageProcessor {
 
     private Tile[][] board;
     private Location gameLocationTL;
+    private Location gameLocationBR;
 
     int TileWidth;
     int TileHeight;
@@ -99,8 +107,28 @@ class ImageProcessor {
         try {
             process = Runtime.getRuntime().exec("resources\\game.exe");
             Thread.sleep(1000);
-        } catch (IOException | InterruptedException ignored) {
+
+            Method pidMethod = process.getClass().getDeclaredMethod("pid");
+            pidMethod.setAccessible(true);
+            Long pid = (Long) pidMethod.invoke(process);
+
+            final User32 user32 = User32.INSTANCE;
+            user32.EnumWindows((hWnd, arg1) -> {
+                IntByReference intByReference = new IntByReference(0);
+                user32.GetWindowThreadProcessId(hWnd, intByReference);
+
+                WinDef.RECT rect = new WinDef.RECT();
+                if (pid.intValue() == intByReference.getValue() && gameLocationTL == null) {
+                    gameHwnd = hWnd;
+                    User32.INSTANCE.GetWindowRect(hWnd, rect);
+                    gameLocationTL = new Location(rect.left, rect.top);
+                    gameLocationBR = new Location(rect.right, rect.bottom);
+                }
+                return true;
+            }, null);
+        } catch (IOException | InterruptedException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
         }
+        System.out.println(gameHwnd);
     }
 
     void click(int x, int y) {
@@ -177,15 +205,15 @@ class ImageProcessor {
         return board;
     }
 
-    int getWidth(){
+    int getWidth() {
         return board.length;
     }
 
-    int getHeight(){
+    int getHeight() {
         return board[0].length;
     }
 
-    int[][] getTable(){
+    int[][] getTable() {
         int n = getWidth(), m = getHeight();
         int[][] ret = new int[n][m];
         for (int i = 0; i < n; i++)
@@ -287,10 +315,22 @@ class ImageProcessor {
         return locations;
     }
 
-    private Mat getScreenshot() {
-        gameLocationTL = null;
-        Location gameLocationBR = null;
+    //Debug method
+    public BufferedImage Mat2BufferedImage(Mat m) {
+        int type = BufferedImage.TYPE_BYTE_GRAY;
+        if (m.channels() > 1) {
+            type = BufferedImage.TYPE_3BYTE_BGR;
+        }
+        int bufferSize = m.channels() * m.cols() * m.rows();
+        byte[] b = new byte[bufferSize];
+        m.get(0, 0, b);
+        BufferedImage image = new BufferedImage(m.cols(), m.rows(), type);
+        final byte[] targetPixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+        System.arraycopy(b, 0, targetPixels, 0, b.length);
+        return image;
+    }
 
+    private Mat getScreenshot() {
         try {
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
             BufferedImage image = new Robot().createScreenCapture(new Rectangle(screenSize));
@@ -299,17 +339,6 @@ class ImageProcessor {
         }
 
         Mat gameBoard = Imgcodecs.imread("resources\\game.png");
-        Mat rangeMat = new Mat();
-        Core.inRange(gameBoard, new Scalar(192, 192, 192), new Scalar(192, 192, 192), rangeMat);
-        for (int i = 0; i < rangeMat.width(); i++)
-            for (int j = 0; j < rangeMat.height(); j++)
-                if (!isZero(rangeMat, i, j, 5))
-                    if (gameLocationTL == null)
-                        gameLocationTL = new Location(i, j);
-                    else
-                        gameLocationBR = new Location(i, j);
-        if (gameLocationBR == null || gameLocationTL == null)
-            throw new RuntimeException("I can't detect game :(");
         gameBoard = new Mat(gameBoard, new Rect(gameLocationTL.getX(), gameLocationTL.getY()
                 , gameLocationBR.getX() - gameLocationTL.getX()
                 , gameLocationBR.getY() - gameLocationTL.getY()));
