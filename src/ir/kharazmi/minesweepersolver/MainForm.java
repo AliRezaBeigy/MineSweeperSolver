@@ -14,7 +14,7 @@ public class MainForm {
         JFrame jFrame = new JFrame();
         jFrame.setContentPane(panel1);
         jFrame.setVisible(true);
-        jFrame.setSize(550, 400);
+        jFrame.setSize(550, 700);
 
         updateBoardButton.addActionListener(e -> {
             imageProcessor.updateBoard();

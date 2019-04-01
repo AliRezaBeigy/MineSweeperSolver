@@ -6,7 +6,7 @@ public class Main {
 
         imageProcessor.startGame();
         imageProcessor.init();
-
+        new Operation(imageProcessor.getWidth(), imageProcessor.getHeight(), imageProcessor.getTable());
         new MainForm(imageProcessor);
     }
 }
