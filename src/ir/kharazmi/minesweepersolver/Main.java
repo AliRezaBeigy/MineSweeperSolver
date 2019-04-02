@@ -5,6 +5,7 @@ public class Main {
         ImageProcessor imageProcessor = new ImageProcessor();
         imageProcessor.startGame();
         imageProcessor.init();
+        //new MainForm(imageProcessor);
         new Solver(imageProcessor).solve();
     }
 }

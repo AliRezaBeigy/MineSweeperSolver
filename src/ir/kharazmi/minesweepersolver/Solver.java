@@ -1,6 +1,5 @@
 package ir.kharazmi.minesweepersolver;
 
-import javax.swing.*;
 import java.security.SecureRandom;
 
 public class Solver {
@@ -49,13 +48,60 @@ public class Solver {
                 }
                 mainOperation.update(imageProcessor);
             } else {
-                int confirm = JOptionPane.showConfirmDialog(null, "Do you want to reset?", "Confirm", JOptionPane.YES_NO_OPTION);
-                if (confirm == JOptionPane.YES_OPTION) {
-                    imageProcessor.reset();
-                    imageProcessor.updateBoard();
-                    new Solver(imageProcessor).solve();
-                } else
-                    System.exit(1);
+                boolean find = false;
+                for (int i = 0; i < width; i++) {
+                    for (int j = 0; j < height; j++) {
+                        if (mainOperation.table[i][j] - mainOperation.getAdj(i, j, -2) == 1) {
+                            //System.out.println("dore:" + i + " " + j);
+                            for (int k = -1; k < 2; k++) {
+                                for (int l = -1; l < 2; l++) {
+                                    int ii = i + k, jj = j + l;
+                                    if (ii > 0 && jj > 0 && ii < width && jj < height && mainOperation.table[ii][jj] == -1) {
+                                        Operation draft = new Operation(width, height, mainOperation.table);
+                                        draft.table[ii][jj] = -2;
+                                        int clicked;
+                                        do {
+                                            clicked = draft.clickable();
+                                            draft.mineFinder();
+                                            draft.clickFinder();
+                                        } while (draft.clickable() > clicked);
+                                        if (draft.checkContradiction()) {
+                                            System.out.println("ooooffff" + ii + " " + jj);
+                                            mainOperation.click[ii][jj] = true;
+                                            find = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (find)
+                                    break;
+                            }
+                        }//hala bar axesh
+                        if (find)
+                            break;
+                    }
+                    if (find)
+                        break;
+                }
+                if (!find) {
+                    if (mainOperation.remain() == 0){
+                        System.out.println("win!!!");
+                        break;
+                    }
+                    //fuck this table
+                    System.out.println("random needed");
+                    mainOperation.randomClick(imageProcessor);
+                    mainOperation.update(imageProcessor);
+                    mainOperation.mineFinder();
+                    mainOperation.clickFinder();
+                }
+//                int confirm = JOptionPane.showConfirmDialog(null, "Do you want to reset?", "Confirm", JOptionPane.YES_NO_OPTION);
+//                if (confirm == JOptionPane.YES_OPTION) {
+//                    imageProcessor.reset();
+//                    imageProcessor.updateBoard();
+//                    new Solver(imageProcessor).solve();
+//                } else
+//                    System.exit(1);
             }
         }
     }

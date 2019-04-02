@@ -1,5 +1,7 @@
 package ir.kharazmi.minesweepersolver;
 
+import java.security.SecureRandom;
+
 public class Operation {
     int width, height;
     int[][] table;
@@ -127,8 +129,7 @@ public class Operation {
     void clickFinder() {
         for (int i = 0; i < width; i++)
             for (int j = 0; j < height; j++) {
-                int x = 0;
-                if (table[i][j] > 0 && (x = table[i][j] - getAdj(i, j, -2)) < getAdj(i, j, -1) && x == 0)
+                if (table[i][j] > 0 && table[i][j] == getAdj(i, j, -2))
                     clickAdj(i, j);
             }
     }
@@ -136,9 +137,9 @@ public class Operation {
     boolean checkContradiction() {
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
-                if (getAdj(i, j, -2) > table[i][j])
+                if (table[i][j] > 0 && getAdj(i, j, -2) > table[i][j])
                     return true;
-                if (getAdj(i, j, -1) - getAdjClick(i, j) < table[i][j] - getAdj(i, j, -2))
+                if (table[i][j] > 0 && getAdj(i, j, -1) - getAdjClick(i, j) < table[i][j] - getAdj(i, j, -2))
                     return true;
             }
         }
@@ -150,6 +151,15 @@ public class Operation {
         for (int i = 0; i < width; i++)
             for (int j = 0; j < height; j++)
                 if (click[i][j])
+                    sum++;
+        return sum;
+    }
+    //TODO merge
+    int remain() {
+        int sum = 0;
+        for (int i = 0; i < width; i++)
+            for (int j = 0; j < height; j++)
+                if (table[i][j] == -1)
                     sum++;
         return sum;
     }
@@ -168,9 +178,17 @@ public class Operation {
         int[][] t = imageProcessor.getTable();
         for (int i = 0; i < width; i++)
             System.arraycopy(t[i], 0, this.table[i], 0, height);
+    }
+
+    void randomClick(ImageProcessor imageProcessor){
+        int rand = new SecureRandom().nextInt(remain());
+        int counter = 0;
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
-                table[i][j] = t[i][j];
+                if (table[i][j] == -1)
+                    counter++;
+                if (counter == rand)
+                    imageProcessor.click(i, j);
             }
         }
     }

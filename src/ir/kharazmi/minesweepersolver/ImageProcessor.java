@@ -136,7 +136,8 @@ class ImageProcessor {
         try {
             Robot bot = new Robot();
             Location tileLocation = board[x][y].getLocation();
-            bot.mouseMove(tileLocation.getX() + gameLocationTL.getX() + (TileWidth / 2), tileLocation.getY() + gameLocationTL.getY() + (TileHeight / 2));
+            bot.mouseMove(gameLocationTL.getX() + tileLocation.getX() +  + (TileWidth / 2), gameLocationTL.getY()
+                    + tileLocation.getY() + (TileHeight / 2));
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
@@ -150,7 +151,8 @@ class ImageProcessor {
         try {
             Robot bot = new Robot();
             Location tileLocation = board[x][y].getLocation();
-            bot.mouseMove(tileLocation.getX() + gameLocationTL.getX() + (TileWidth / 2), tileLocation.getY() + gameLocationTL.getY() + (TileHeight / 2));
+            bot.mouseMove(gameLocationTL.getX() + tileLocation.getX() +  + (TileWidth / 2), gameLocationTL.getY()
+                    + tileLocation.getY() + (TileHeight / 2));
             bot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
             updateBoard();
