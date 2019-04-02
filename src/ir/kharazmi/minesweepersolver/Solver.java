@@ -23,6 +23,16 @@ public class Solver {
         mainOperation.update(imageProcessor);
         while (true) {
             mainOperation.mineFinder();
+            while (mainOperation.flagable() > 0) {
+                for (int i = 0; i < width; i++) {
+                    for (int j = 0; j < height; j++) {
+                        if (mainOperation.flag[i][j]) {
+                            imageProcessor.rightClick(i, j);
+                            mainOperation.flag[i][j] = false;
+                        }
+                    }
+                }
+            }
             mainOperation.clickFinder();
             if (mainOperation.clickable() > 0) {
                 while (mainOperation.clickable() > 0) {
