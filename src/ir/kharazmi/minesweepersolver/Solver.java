@@ -27,7 +27,7 @@ public class Solver {
                 for (int i = 0; i < width; i++) {
                     for (int j = 0; j < height; j++) {
                         if (mainOperation.flag[i][j]) {
-                            imageProcessor.rightClick(i, j);
+                            imageProcessor.flag(i, j);
                             mainOperation.flag[i][j] = false;
                         }
                     }
