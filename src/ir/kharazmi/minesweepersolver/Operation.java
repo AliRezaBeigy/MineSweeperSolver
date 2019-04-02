@@ -24,7 +24,7 @@ public class Operation {
             ret++;
         if (x < width - 1 && y > 0 && table[x + 1][y - 1] == val)
             ret++;
-        if (x > 0 && y < height - 1 && table[x - 1][y + 1] == -val)
+        if (x > 0 && y < height - 1 && table[x - 1][y + 1] == val)
             ret++;
         if (y < height - 1 && table[x][y + 1] == val)
             ret++;
@@ -99,7 +99,6 @@ public class Operation {
             for (int j = 0; j < height; j++)
                 if (table[i][j] > 0 && getAdj(i, j, -1) > 0 && getAdj(i, j, -1) + getAdj(i, j, -2) == table[i][j])
                     setAdj(i, j, -1, -2);
-
     }
 
     void clickFinder() {
