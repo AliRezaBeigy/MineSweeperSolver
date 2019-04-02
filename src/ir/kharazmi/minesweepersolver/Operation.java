@@ -93,9 +93,9 @@ public class Operation {
         if (x < width - 1 && table[x + 1][y] == -1)
             click[x + 1][y] = true;
         if (x < width - 1 && y < height - 1 && table[x + 1][y + 1] == -1)
-            clicflagk[x + 1][y + 1] = true;
+            click[x + 1][y + 1] = true;
     }
-    
+
     void flagAdj(int x, int y) {
         if (x > 0 && y > 0 && table[x - 1][y - 1] == -1)
             flag[x - 1][y - 1] = true;
@@ -119,16 +119,18 @@ public class Operation {
         for (int i = 0; i < width; i++)
             for (int j = 0; j < height; j++)
                 if (table[i][j] > 0 && getAdj(i, j, -1) > 0 && getAdj(i, j, -1) + getAdj(i, j, -2) == table[i][j]) {
-                    setAdj(i, j, -1, -2);
                     flagAdj(i, j);
+                    setAdj(i, j, -1, -2);
                 }
     }
 
     void clickFinder() {
         for (int i = 0; i < width; i++)
-            for (int j = 0; j < height; j++)
-                if (table[i][j] > 0 && table[i][j] == getAdj(i, j, -1))
+            for (int j = 0; j < height; j++) {
+                int x = 0;
+                if (table[i][j] > 0 && (x = table[i][j] - getAdj(i, j, -2)) < getAdj(i, j, -1) && x == 0)
                     clickAdj(i, j);
+            }
     }
 
     boolean checkContradiction() {
@@ -151,7 +153,7 @@ public class Operation {
                     sum++;
         return sum;
     }
-    
+
     int flagable() {
         int sum = 0;
         for (int i = 0; i < width; i++)
@@ -164,6 +166,8 @@ public class Operation {
     void update(ImageProcessor imageProcessor) {
         imageProcessor.updateBoard();
         int[][] t = imageProcessor.getTable();
+        for (int i = 0; i < width; i++)
+            System.arraycopy(t[i], 0, this.table[i], 0, height);
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
                 table[i][j] = t[i][j];
