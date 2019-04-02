@@ -151,6 +151,15 @@ public class Operation {
                     sum++;
         return sum;
     }
+    
+    int flagable() {
+        int sum = 0;
+        for (int i = 0; i < width; i++)
+            for (int j = 0; j < height; j++)
+                if (flag[i][j])
+                    sum++;
+        return sum;
+    }
 
     void update(ImageProcessor imageProcessor) {
         imageProcessor.updateBoard();
