@@ -154,6 +154,7 @@ public class Operation {
                     sum++;
         return sum;
     }
+
     //TODO merge
     int remain() {
         int sum = 0;
@@ -180,7 +181,7 @@ public class Operation {
             System.arraycopy(t[i], 0, this.table[i], 0, height);
     }
 
-    void randomClick(ImageProcessor imageProcessor){
+    void randomClick(ImageProcessor imageProcessor) {
         int rand = new SecureRandom().nextInt(remain());
         int counter = 0;
         for (int i = 0; i < width; i++) {

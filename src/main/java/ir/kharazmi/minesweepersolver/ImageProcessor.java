@@ -136,7 +136,7 @@ class ImageProcessor {
         try {
             Robot bot = new Robot();
             Location tileLocation = board[x][y].getLocation();
-            bot.mouseMove(gameLocationTL.getX() + tileLocation.getX() +  + (TileWidth / 2), gameLocationTL.getY()
+            bot.mouseMove(gameLocationTL.getX() + tileLocation.getX() + +(TileWidth / 2), gameLocationTL.getY()
                     + tileLocation.getY() + (TileHeight / 2));
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
@@ -151,7 +151,7 @@ class ImageProcessor {
         try {
             Robot bot = new Robot();
             Location tileLocation = board[x][y].getLocation();
-            bot.mouseMove(gameLocationTL.getX() + tileLocation.getX() +  + (TileWidth / 2), gameLocationTL.getY()
+            bot.mouseMove(gameLocationTL.getX() + tileLocation.getX() + +(TileWidth / 2), gameLocationTL.getY()
                     + tileLocation.getY() + (TileHeight / 2));
             bot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
@@ -338,6 +338,7 @@ class ImageProcessor {
         try {
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
             BufferedImage image = new Robot().createScreenCapture(new Rectangle(screenSize));
+            BufferedImage screenshot = JNAScreenShot.getScreenshot(new Rectangle(screenSize));
             ImageIO.write(image, "png", new File("resources\\game.png"));
         } catch (IOException | AWTException ignored) {
         }

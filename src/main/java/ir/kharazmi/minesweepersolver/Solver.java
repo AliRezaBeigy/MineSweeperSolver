@@ -84,7 +84,7 @@ public class Solver {
                         break;
                 }
                 if (!find) {
-                    if (mainOperation.remain() == 0){
+                    if (mainOperation.remain() == 0) {
                         System.out.println("win!!!");
                         break;
                     }
