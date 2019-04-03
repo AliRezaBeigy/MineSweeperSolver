@@ -134,7 +134,7 @@ public class Solver {
         }
     }
 
-    void easySolve(Operation operation){
+    void easySolve(Operation operation) {
         int clicked;
         int flaged;
         do {

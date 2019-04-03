@@ -11,6 +11,8 @@ import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -320,12 +322,10 @@ class ImageProcessor {
     }
 
     private ArrayList<Location> match(Mat src, Template template, Color color) {
-        Mat srcGray = new Mat();
         Mat templateGray = new Mat();
-        Imgproc.cvtColor(src, srcGray, Imgproc.COLOR_BGR2GRAY);
         Imgproc.cvtColor(template.getTelmplate(), templateGray, Imgproc.COLOR_BGR2GRAY);
         Mat res = new Mat();
-        Imgproc.matchTemplate(srcGray, templateGray, res, Imgproc.TM_CCOEFF_NORMED);
+        Imgproc.matchTemplate(src, templateGray, res, Imgproc.TM_CCOEFF_NORMED);
 
         ArrayList<Location> locations = new ArrayList<>();
 
@@ -347,22 +347,37 @@ class ImageProcessor {
     private Mat getScreenshot() {
         gameLocationTL = null;
         Location gameLocationBR = null;
+        Mat gameBoard = null;
 
+        WinDef.HWND hDesktop = User32.INSTANCE.GetDesktopWindow();
+        WinDef.RECT rect = new WinDef.RECT();
+        User32.INSTANCE.GetWindowRect(hDesktop, rect);
+        BufferedImage screenshot = JNAScreenShot.getScreenshot(rect.toRectangle());
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try {
-            WinDef.HWND hDesktop = User32.INSTANCE.GetDesktopWindow();
-            WinDef.RECT rect = new WinDef.RECT();
-            User32.INSTANCE.GetWindowRect(hDesktop, rect);
-            BufferedImage screenshot = JNAScreenShot.getScreenshot(rect.toRectangle());
-            ImageIO.write(screenshot, "png", new File("resources\\game.png"));
+            ImageIO.write(screenshot, "png", outputStream);
+            ByteArrayInputStream stream = new ByteArrayInputStream(outputStream.toByteArray());
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            int nRead;
+            byte[] data = new byte[16384];
+
+            while ((nRead = stream.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, nRead);
+            }
+
+            buffer.flush();
+            byte[] temporaryImageInMemory = buffer.toByteArray();
+            buffer.close();
+            stream.close();
+            gameBoard = Imgcodecs.imdecode(new MatOfByte(temporaryImageInMemory), Imgcodecs.IMREAD_GRAYSCALE);
         } catch (IOException ignored) {
         }
-
-        Mat gameBoard = Imgcodecs.imread("resources\\game.png");
         Mat rangeMat = new Mat();
         Core.inRange(gameBoard, new Scalar(192, 192, 192), new Scalar(192, 192, 192), rangeMat);
+//        Core.inRange(gameBoard, new Scalar(214, 226, 238), new Scalar(192, 192, 192), rangeMat);
         for (int i = 0; i < rangeMat.width(); i++)
             for (int j = 0; j < rangeMat.height(); j++)
-                if (!isZero(rangeMat, i, j, 5))
+                if (!isZero(rangeMat, i, j, 4))
                     if (gameLocationTL == null)
                         gameLocationTL = new Location(i, j);
                     else
