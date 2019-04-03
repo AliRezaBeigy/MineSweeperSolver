@@ -1,5 +1,6 @@
 package ir.kharazmi.minesweepersolver;
 
+import com.sun.jna.platform.win32.WinDef;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -348,16 +349,18 @@ class ImageProcessor {
         Location gameLocationBR = null;
 
         try {
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            BufferedImage image = new Robot().createScreenCapture(new Rectangle(screenSize));
-            BufferedImage screenshot = JNAScreenShot.getScreenshot(new Rectangle(screenSize));
-            ImageIO.write(image, "png", new File("resources\\game.png"));
-        } catch (IOException | AWTException ignored) {
+            WinDef.HWND hDesktop = User32.INSTANCE.GetDesktopWindow();
+            WinDef.RECT rect = new WinDef.RECT();
+            User32.INSTANCE.GetWindowRect(hDesktop, rect);
+            BufferedImage screenshot = JNAScreenShot.getScreenshot(rect.toRectangle());
+            ImageIO.write(screenshot, "png", new File("resources\\game.png"));
+        } catch (IOException ignored) {
         }
 
         Mat gameBoard = Imgcodecs.imread("resources\\game.png");
         Mat rangeMat = new Mat();
         Core.inRange(gameBoard, new Scalar(192, 192, 192), new Scalar(192, 192, 192), rangeMat);
+        Core.inRange(gameBoard, new Scalar(214, 226, 238), new Scalar(192, 192, 192), rangeMat);
         for (int i = 0; i < rangeMat.width(); i++)
             for (int j = 0; j < rangeMat.height(); j++)
                 if (!isZero(rangeMat, i, j, 5))
