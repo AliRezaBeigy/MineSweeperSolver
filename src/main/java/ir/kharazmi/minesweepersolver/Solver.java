@@ -57,15 +57,10 @@ public class Solver {
                             for (int k = -1; k < 2; k++) {
                                 for (int l = -1; l < 2; l++) {
                                     int ii = i + k, jj = j + l;
-                                    if (ii > 0 && jj > 0 && ii < width && jj < height && mainOperation.table[ii][jj] == -1) {
+                                    if (ii >= 0 && jj >= 0 && ii < width && jj < height && mainOperation.table[ii][jj] == -1) {
                                         Operation draft = new Operation(width, height, mainOperation.table);
                                         draft.table[ii][jj] = -2;
-                                        int clicked;
-                                        do {
-                                            clicked = draft.clickable();
-                                            draft.mineFinder();
-                                            draft.clickFinder();
-                                        } while (draft.clickable() > clicked);
+                                        easySolve(draft);
                                         if (draft.checkContradiction()) {
                                             System.out.println("ooooffff" + ii + " " + jj);
                                             mainOperation.click[ii][jj] = true;
@@ -77,7 +72,29 @@ public class Solver {
                                 if (find)
                                     break;
                             }
-                        }//hala bar axesh
+                        }
+                        if (mainOperation.getAdj(i, j, -1) - (mainOperation.table[i][j] - mainOperation.getAdj(i, j, -2)) == 1) {
+                            for (int k = -1; k < 2; k++) {
+                                for (int l = -1; l < 2; l++) {
+                                    int ii = i + k, jj = j + l;
+                                    if (ii >= 0 && jj >= 0 && ii < width && jj < height && mainOperation.table[ii][jj] == -1) {
+                                        Operation draft = new Operation(width, height, mainOperation.table);
+                                        draft.click[ii][jj] = true;
+                                        draft.setAdj(i, j, -1, -2);
+                                        draft.table[ii][jj] = -1;
+                                        easySolve(draft);
+                                        if (draft.checkContradiction()) {
+                                            System.out.println("woooww" + ii + " " + jj);
+                                            mainOperation.flag[ii][jj] = true;
+                                            find = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (find)
+                                    break;
+                            }
+                        }
                         if (find)
                             break;
                     }
@@ -94,7 +111,7 @@ public class Solver {
                     mainOperation.randomClick(imageProcessor);
                     mainOperation.update(imageProcessor);
                     if (imageProcessor.getBombCount() != 0) {
-                        int confirm = JOptionPane.showConfirmDialog(null, "I lose the game, can i start again?", "Confirm", JOptionPane.YES_NO_OPTION);
+                        int confirm = JOptionPane.showConfirmDialog(null, "I lost the game, can i start again?", "Confirm", JOptionPane.YES_NO_OPTION);
                         if (confirm == JOptionPane.YES_OPTION) {
                             imageProcessor.reset();
                             imageProcessor.updateBoard();
@@ -115,5 +132,16 @@ public class Solver {
 //                    System.exit(1);
             }
         }
+    }
+
+    void easySolve(Operation operation){
+        int clicked;
+        int flaged;
+        do {
+            clicked = operation.clickable();
+            flaged = operation.flagable();
+            operation.mineFinder();
+            operation.clickFinder();
+        } while (operation.clickable() > clicked || operation.flagable() > flaged);
     }
 }

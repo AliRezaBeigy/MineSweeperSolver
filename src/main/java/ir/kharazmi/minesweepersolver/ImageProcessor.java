@@ -360,7 +360,6 @@ class ImageProcessor {
         Mat gameBoard = Imgcodecs.imread("resources\\game.png");
         Mat rangeMat = new Mat();
         Core.inRange(gameBoard, new Scalar(192, 192, 192), new Scalar(192, 192, 192), rangeMat);
-        Core.inRange(gameBoard, new Scalar(214, 226, 238), new Scalar(192, 192, 192), rangeMat);
         for (int i = 0; i < rangeMat.width(); i++)
             for (int j = 0; j < rangeMat.height(); j++)
                 if (!isZero(rangeMat, i, j, 5))
