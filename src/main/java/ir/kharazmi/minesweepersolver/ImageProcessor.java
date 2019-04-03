@@ -25,6 +25,7 @@ class ImageProcessor {
     private Process process;
     private List<Template> resetTile;
     private List<Template> unknownTile;
+    private List<Template> bombTile;
     private List<Template> emptyTile;
     private List<Template> flagTile;
     private List<Template> oneTile;
@@ -37,9 +38,11 @@ class ImageProcessor {
     private List<Template> eightTile;
     private Tile[][] board;
     private Location gameLocationTL;
+    private int bomb_count;
 
     void init() {
         resetTile = getTemplates("reset");
+        bombTile = getTemplates("bomb");
         unknownTile = getTemplates("unknown");
         emptyTile = getTemplates("empty");
         flagTile = getTemplates("flag");
@@ -142,7 +145,6 @@ class ImageProcessor {
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-            updateBoard();
         } catch (AWTException ignored) {
         }
     }
@@ -155,14 +157,22 @@ class ImageProcessor {
                     + tileLocation.getY() + (TileHeight / 2));
             bot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
-            updateBoard();
         } catch (AWTException ignored) {
         }
+    }
+
+    public int getBombCount() {
+        return bomb_count;
     }
 
     void updateBoard() {
         Mat gameBoard = getScreenshot();
 
+        Thread bombTileThread = new Thread(() -> {
+            ArrayList<Location> bomb_locations = match(gameBoard, bombTile, null);
+            bomb_count = bomb_locations.size();
+            updateBoard(bomb_locations, -3);
+        });
         Thread unknownTileThread = new Thread(() -> updateBoard(match(gameBoard, unknownTile, null), -1));
         Thread emptyTileThread = new Thread(() -> updateBoard(match(gameBoard, emptyTile, null), 0));
         Thread flagTileThread = new Thread(() -> updateBoard(match(gameBoard, flagTile, null), -2));
@@ -175,6 +185,7 @@ class ImageProcessor {
         Thread sevenTileThread = new Thread(() -> updateBoard(match(gameBoard, sevenTile, null), 7));
         Thread eightTileThread = new Thread(() -> updateBoard(match(gameBoard, eightTile, null), 8));
 
+        bombTileThread.start();
         unknownTileThread.start();
         emptyTileThread.start();
         flagTileThread.start();
@@ -188,6 +199,7 @@ class ImageProcessor {
         eightTileThread.start();
 
         try {
+            bombTileThread.join();
             unknownTileThread.join();
             emptyTileThread.join();
             flagTileThread.join();
