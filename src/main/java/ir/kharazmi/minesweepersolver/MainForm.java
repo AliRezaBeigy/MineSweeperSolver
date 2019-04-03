@@ -22,7 +22,14 @@ public class MainForm {
 
             StringBuilder result = new StringBuilder();
             Tile[][] board = imageProcessor.getBoard();
-            for (Tile[] tiles : board) {
+            Tile[][] tiles1 = new Tile[board[0].length][board.length];
+            for (int i = 0; i < board.length; i++) {
+                Tile[] tiles = board[i];
+                for (int i1 = 0; i1 < tiles.length; i1++) {
+                    tiles1[i1][i] = board[i][i1];
+                }
+            }
+            for (Tile[] tiles : tiles1) {
                 for (Tile tile : tiles) {
                     result.append(String.format("%4s", tile.getState()));
                 }
@@ -32,14 +39,20 @@ public class MainForm {
         });
 
         clickButton.addActionListener(e -> {
-            imageProcessor.flag(Integer.parseInt(xField.getText()), Integer.parseInt(yField.getText()));
+            imageProcessor.click(Integer.parseInt(xField.getText()), Integer.parseInt(yField.getText()));
         });
 
         resetGameButton.addActionListener(e -> imageProcessor.reset());
-
         StringBuilder result = new StringBuilder();
         Tile[][] board = imageProcessor.getBoard();
-        for (Tile[] tiles : board) {
+        Tile[][] tiles1 = new Tile[board[0].length][board.length];
+        for (int i = 0; i < board.length; i++) {
+            Tile[] tiles = board[i];
+            for (int i1 = 0; i1 < tiles.length; i1++) {
+                tiles1[i1][i] = board[i][i1];
+            }
+        }
+        for (Tile[] tiles : tiles1) {
             for (Tile tile : tiles) {
                 result.append(String.format("%4s", tile.getState()));
             }

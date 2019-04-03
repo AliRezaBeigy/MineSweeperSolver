@@ -62,7 +62,7 @@ public class Solver {
                                         draft.table[ii][jj] = -2;
                                         easySolve(draft);
                                         if (draft.checkContradiction()) {
-                                            System.out.println("ooooffff" + ii + " " + jj);
+//                                            System.out.println("ooooffff" + ii + " " + jj);
                                             mainOperation.click[ii][jj] = true;
                                             find = true;
                                             break;
@@ -84,7 +84,7 @@ public class Solver {
                                         draft.table[ii][jj] = -1;
                                         easySolve(draft);
                                         if (draft.checkContradiction()) {
-                                            System.out.println("woooww" + ii + " " + jj);
+//                                            System.out.println("woooww" + ii + " " + jj);
                                             mainOperation.flag[ii][jj] = true;
                                             find = true;
                                             break;

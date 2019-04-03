@@ -16,6 +16,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 class ImageProcessor {
@@ -42,6 +43,8 @@ class ImageProcessor {
     private Tile[][] board;
     private Location gameLocationTL;
     private int bomb_count;
+    private float ratioX;
+    private float ratioY;
 
     void init() {
         resetTile = getTemplates("reset");
@@ -71,36 +74,40 @@ class ImageProcessor {
                 locations.add(boarder_location);
         }
 
-        int h = 0;
-        int w = 0;
-        int temp = locations.get(0).getX();
-        for (Location item : locations) {
-            if (item.getX() == temp)
-                h += 1;
-            else
-                break;
-        }
-        temp = locations.get(0).getY();
-        for (int i = 0; i < locations.size(); i += h) {
-            Location item = locations.get(i);
-            if (item.getY() == temp)
-                w += 1;
-            else
-                break;
-        }
+        ArrayList<Integer> xs = new ArrayList<>();
+        for (Location location : locations)
+            if (!xs.contains(location.getX()) && !xs.contains(location.getX() - 1) && !xs.contains(location.getX() + 1))
+                xs.add(location.getX());
+        ArrayList<Integer> ys = new ArrayList<>();
+        for (Location location : locations)
+            if (!ys.contains(location.getY()) && !ys.contains(location.getY() - 1) && !ys.contains(location.getY() + 1))
+                ys.add(location.getY());
+
+        Collections.sort(xs);
+        Collections.sort(ys);
+        int w = xs.size();
+        int h = ys.size();
 
         board = new Tile[w][h];
-        for (int i = 0; i < w; i++)
-            for (int j = 0; j < h; j++) {
-                Location location = locations.get(j + (i * h));
-                board[i][j] = new Tile(-1, new Location(location.getX(), location.getY()));
-            }
+        for (Location location : locations) {
+            int i = xs.indexOf(location.getX());
+            if (i == -1)
+                i = xs.indexOf(location.getX() - 1);
+            if (i == -1)
+                i = xs.indexOf(location.getX() + 1);
+            int j = ys.indexOf(location.getY());
+            if (j == -1)
+                j = ys.indexOf(location.getY() - 1);
+            if (j == -1)
+                j = ys.indexOf(location.getY() + 1);
+            board[i][j] = new Tile(-1, new Location(location.getX(), location.getY()));
+        }
 
         TileWidth = board[1][0].getLocation().getX() - board[0][0].getLocation().getX();
         TileHeight = board[0][1].getLocation().getY() - board[0][0].getLocation().getY();
     }
 
-    public Image toBufferedImage(Mat m) {
+    public BufferedImage toBufferedImage(Mat m) {
         int type = BufferedImage.TYPE_BYTE_GRAY;
         if (m.channels() > 1) {
             type = BufferedImage.TYPE_3BYTE_BGR;
@@ -127,7 +134,8 @@ class ImageProcessor {
         ArrayList<Location> reset_locations = match(getScreenshot(), resetTile, Color.red);
         try {
             Robot bot = new Robot();
-            bot.mouseMove(reset_locations.get(0).getX() + gameLocationTL.getX() + (TileWidth / 2), reset_locations.get(0).getY() + gameLocationTL.getY() + (TileHeight / 2));
+            bot.mouseMove(new Float((reset_locations.get(0).getX() + gameLocationTL.getX() + (TileWidth / 2f)) * ratioX).intValue()
+                    , new Float((reset_locations.get(0).getY() + gameLocationTL.getY() + (TileHeight / 2f)) * ratioY).intValue());
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
@@ -142,8 +150,8 @@ class ImageProcessor {
         try {
             Robot bot = new Robot();
             Location tileLocation = board[x][y].getLocation();
-            bot.mouseMove(gameLocationTL.getX() + tileLocation.getX() + +(TileWidth / 2), gameLocationTL.getY()
-                    + tileLocation.getY() + (TileHeight / 2));
+            bot.mouseMove(new Float((gameLocationTL.getX() + tileLocation.getX() + (TileWidth / 2f)) * ratioX).intValue()
+                    , new Float((gameLocationTL.getY() + tileLocation.getY() + (TileHeight / 2f)) * ratioY).intValue());
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
@@ -156,8 +164,8 @@ class ImageProcessor {
         try {
             Robot bot = new Robot();
             Location tileLocation = board[x][y].getLocation();
-            bot.mouseMove(gameLocationTL.getX() + tileLocation.getX() + +(TileWidth / 2), gameLocationTL.getY()
-                    + tileLocation.getY() + (TileHeight / 2));
+            bot.mouseMove(new Float((gameLocationTL.getX() + +tileLocation.getX() + (TileWidth / 2f)) * ratioX).intValue()
+                    , new Float((gameLocationTL.getY() + tileLocation.getY() + (TileHeight / 2f)) * ratioY).intValue());
             bot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
         } catch (AWTException ignored) {
@@ -324,8 +332,10 @@ class ImageProcessor {
     private ArrayList<Location> match(Mat src, Template template, Color color) {
         Mat templateGray = new Mat();
         Imgproc.cvtColor(template.getTelmplate(), templateGray, Imgproc.COLOR_BGR2GRAY);
+        Mat srcGray = new Mat();
+        Imgproc.cvtColor(src, srcGray, Imgproc.COLOR_BGR2GRAY);
         Mat res = new Mat();
-        Imgproc.matchTemplate(src, templateGray, res, Imgproc.TM_CCOEFF_NORMED);
+        Imgproc.matchTemplate(srcGray, templateGray, res, Imgproc.TM_CCOEFF_NORMED);
 
         ArrayList<Location> locations = new ArrayList<>();
 
@@ -344,7 +354,7 @@ class ImageProcessor {
         return locations;
     }
 
-    private Mat getScreenshot() {
+    public Mat getScreenshot() {
         gameLocationTL = null;
         Location gameLocationBR = null;
         Mat gameBoard = null;
@@ -369,12 +379,14 @@ class ImageProcessor {
             byte[] temporaryImageInMemory = buffer.toByteArray();
             buffer.close();
             stream.close();
-            gameBoard = Imgcodecs.imdecode(new MatOfByte(temporaryImageInMemory), Imgcodecs.IMREAD_GRAYSCALE);
+            gameBoard = Imgcodecs.imdecode(new MatOfByte(temporaryImageInMemory), Imgcodecs.IMREAD_COLOR);
         } catch (IOException ignored) {
         }
+        ratioX = rect.toRectangle().width / 1024f;
+        ratioY = rect.toRectangle().height / 768f;
+        Imgproc.resize(gameBoard, gameBoard, new Size(1024, 768));
         Mat rangeMat = new Mat();
         Core.inRange(gameBoard, new Scalar(192, 192, 192), new Scalar(192, 192, 192), rangeMat);
-//        Core.inRange(gameBoard, new Scalar(214, 226, 238), new Scalar(192, 192, 192), rangeMat);
         for (int i = 0; i < rangeMat.width(); i++)
             for (int j = 0; j < rangeMat.height(); j++)
                 if (!isZero(rangeMat, i, j, 4))
