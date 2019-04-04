@@ -1,6 +1,7 @@
 package ir.kharazmi.minesweepersolver;
 
 import com.sun.jna.platform.win32.WinDef;
+import com.sun.jna.ptr.IntByReference;
 import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -15,6 +16,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,9 +27,26 @@ class ImageProcessor {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
+    final int ACCURACY_UNKNOWN_LOCATION = 1;
+    final double DEFAULT_THRUSHOLD = 0.8;
+
     int TileWidth;
     int TileHeight;
+
+    private float ratioX = 1;
+    private float ratioY = 1;
+
+    private int bomb_count;
+    private int wrong_flag_count;
+
     private Process process;
+    private WinDef.HWND gameHwnd;
+
+    private Tile[][] board;
+    private Mat gameBoardBackup;
+
+    private Location gameLocationTL;
+
     private List<Template> resetTile;
     private List<Template> unknownTile;
     private List<Template> bombTile;
@@ -40,11 +60,15 @@ class ImageProcessor {
     private List<Template> sixTile;
     private List<Template> sevenTile;
     private List<Template> eightTile;
-    private Tile[][] board;
-    private Location gameLocationTL;
-    private int bomb_count;
-    private float ratioX;
-    private float ratioY;
+    private List<Template> wrongFlagTile;
+
+    private UpdateBoardListener updateBoardListener;
+
+//    private int ks;
+
+    public void setUpdateBoardListener(UpdateBoardListener updateBoardListener) {
+        this.updateBoardListener = updateBoardListener;
+    }
 
     void init() {
         resetTile = getTemplates("reset");
@@ -60,6 +84,7 @@ class ImageProcessor {
         sixTile = getTemplates("six");
         sevenTile = getTemplates("seven");
         eightTile = getTemplates("eight");
+        wrongFlagTile = getTemplates("wrong_flag");
 
         Mat gameBoard = getScreenshot();
         ArrayList<Location> boarder_locations = match(gameBoard, unknownTile, Color.red);
@@ -67,7 +92,7 @@ class ImageProcessor {
         ArrayList<Location> locations = new ArrayList<>();
         for (Location boarder_location : boarder_locations) {
             boolean exist = false;
-            for (Location approximateLocation : getApproximateLocations(boarder_location, 1))
+            for (Location approximateLocation : getApproximateLocations(boarder_location, ACCURACY_UNKNOWN_LOCATION))
                 if (boarder_locations.contains(approximateLocation) && !approximateLocation.equals(boarder_location))
                     exist = true;
             if (!exist)
@@ -83,6 +108,37 @@ class ImageProcessor {
             if (!ys.contains(location.getY()) && !ys.contains(location.getY() - 1) && !ys.contains(location.getY() + 1))
                 ys.add(location.getY());
 
+        for (int i = 0; i < xs.size(); i++) {
+            Integer x = xs.get(i);
+            int xCount = 0;
+            for (Location location : locations) {
+                if (location.getX() == x) {
+                    xCount++;
+                    if (xCount > 2)
+                        break;
+                }
+            }
+            if (xCount <= 2) {
+                xs.remove(x);
+                i--;
+            }
+        }
+        for (int i = 0; i < ys.size(); i++) {
+            Integer y = ys.get(i);
+            int yCount = 0;
+            for (Location location : locations) {
+                if (location.getY() == y) {
+                    yCount++;
+                    if (yCount > 2)
+                        break;
+                }
+            }
+            if (yCount <= 2) {
+                ys.remove(y);
+                i--;
+            }
+        }
+
         Collections.sort(xs);
         Collections.sort(ys);
         int w = xs.size();
@@ -90,21 +146,25 @@ class ImageProcessor {
 
         board = new Tile[w][h];
         for (Location location : locations) {
-            int i = xs.indexOf(location.getX());
-            if (i == -1)
-                i = xs.indexOf(location.getX() - 1);
-            if (i == -1)
-                i = xs.indexOf(location.getX() + 1);
-            int j = ys.indexOf(location.getY());
-            if (j == -1)
-                j = ys.indexOf(location.getY() - 1);
-            if (j == -1)
-                j = ys.indexOf(location.getY() + 1);
-            board[i][j] = new Tile(-1, new Location(location.getX(), location.getY()));
+            int i = indexOfLocation(location.getX(), xs);
+            int j = indexOfLocation(location.getY(), ys);
+            if (i == -1 || j == -1)
+                continue;
+            board[i][j] = new Tile(-1, new Location(location.getX(), location.getY(), 0));
         }
 
         TileWidth = board[1][0].getLocation().getX() - board[0][0].getLocation().getX();
         TileHeight = board[0][1].getLocation().getY() - board[0][0].getLocation().getY();
+    }
+
+    private int indexOfLocation(int o, ArrayList<Integer> s) {
+        int i = s.indexOf(o);
+        int f = -1 * ACCURACY_UNKNOWN_LOCATION;
+        while (i == -1 && f <= ACCURACY_UNKNOWN_LOCATION) {
+            i = s.indexOf(o + f);
+            f++;
+        }
+        return i;
     }
 
     public BufferedImage toBufferedImage(Mat m) {
@@ -114,7 +174,7 @@ class ImageProcessor {
         }
         int bufferSize = m.channels() * m.cols() * m.rows();
         byte[] b = new byte[bufferSize];
-        m.get(0, 0, b); // get all the pixels
+        m.get(0, 0, b);
         BufferedImage image = new BufferedImage(m.cols(), m.rows(), type);
         final byte[] targetPixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
         System.arraycopy(b, 0, targetPixels, 0, b.length);
@@ -126,16 +186,35 @@ class ImageProcessor {
         try {
             process = Runtime.getRuntime().exec("resources\\game.exe");
             Thread.sleep(1000);
-        } catch (IOException | InterruptedException ignored) {
+            Method pidMethod = process.getClass().getDeclaredMethod("pid");
+            pidMethod.setAccessible(true);
+            Long pid = (Long) pidMethod.invoke(process);
+
+            final User32 user32 = User32.INSTANCE;
+            user32.EnumWindows((hWnd, arg1) -> {
+                IntByReference intByReference = new IntByReference(0);
+                user32.GetWindowThreadProcessId(hWnd, intByReference);
+
+                WinDef.RECT rect = new WinDef.RECT();
+                if (pid.intValue() == intByReference.getValue() && gameLocationTL == null) {
+                    gameHwnd = hWnd;
+                    User32.INSTANCE.GetWindowRect(hWnd, rect);
+                    gameLocationTL = new Location(rect.left, rect.top, 0);
+                }
+                return true;
+            }, null);
+        } catch (IOException | InterruptedException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
         }
     }
 
     void reset() {
         ArrayList<Location> reset_locations = match(getScreenshot(), resetTile, Color.red);
+        System.out.println("Reset game...");
+        if (reset_locations.size() == 0) return;
         try {
             Robot bot = new Robot();
-            bot.mouseMove(new Float((reset_locations.get(0).getX() + gameLocationTL.getX() + (TileWidth / 2f)) * ratioX).intValue()
-                    , new Float((reset_locations.get(0).getY() + gameLocationTL.getY() + (TileHeight / 2f)) * ratioY).intValue());
+            bot.mouseMove(new Float(((reset_locations.get(0).getX() + (TileWidth / 2f)) * ratioX) + gameLocationTL.getX()).intValue()
+                    , new Float(((reset_locations.get(0).getY() + (TileHeight / 2f)) * ratioY) + gameLocationTL.getY()).intValue());
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
@@ -150,8 +229,8 @@ class ImageProcessor {
         try {
             Robot bot = new Robot();
             Location tileLocation = board[x][y].getLocation();
-            bot.mouseMove(new Float((gameLocationTL.getX() + tileLocation.getX() + (TileWidth / 2f)) * ratioX).intValue()
-                    , new Float((gameLocationTL.getY() + tileLocation.getY() + (TileHeight / 2f)) * ratioY).intValue());
+            bot.mouseMove(new Float(gameLocationTL.getX() + ((tileLocation.getX() + (TileWidth / 2f)) * ratioX)).intValue()
+                    , new Float(gameLocationTL.getY() + ((tileLocation.getY() + (TileHeight / 2f)) * ratioY)).intValue());
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
@@ -164,16 +243,12 @@ class ImageProcessor {
         try {
             Robot bot = new Robot();
             Location tileLocation = board[x][y].getLocation();
-            bot.mouseMove(new Float((gameLocationTL.getX() + +tileLocation.getX() + (TileWidth / 2f)) * ratioX).intValue()
-                    , new Float((gameLocationTL.getY() + tileLocation.getY() + (TileHeight / 2f)) * ratioY).intValue());
+            bot.mouseMove(new Float(gameLocationTL.getX() + ((tileLocation.getX() + (TileWidth / 2f)) * ratioX)).intValue()
+                    , new Float(gameLocationTL.getY() + ((tileLocation.getY() + (TileHeight / 2f)) * ratioY)).intValue());
             bot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
         } catch (AWTException ignored) {
         }
-    }
-
-    public int getBombCount() {
-        return bomb_count;
     }
 
     void updateBoard() {
@@ -184,7 +259,7 @@ class ImageProcessor {
             bomb_count = bomb_locations.size();
             updateBoard(bomb_locations, -3);
         });
-        Thread unknownTileThread = new Thread(() -> updateBoard(match(gameBoard, unknownTile, null), -1));
+        Thread unknownTileThread = new Thread(() -> updateBoard(match(gameBoard, unknownTile, Color.blue), -1));
         Thread emptyTileThread = new Thread(() -> updateBoard(match(gameBoard, emptyTile, null), 0));
         Thread flagTileThread = new Thread(() -> updateBoard(match(gameBoard, flagTile, null), -2));
         Thread oneTileThread = new Thread(() -> updateBoard(match(gameBoard, oneTile, null), 1));
@@ -195,6 +270,11 @@ class ImageProcessor {
         Thread sixTileThread = new Thread(() -> updateBoard(match(gameBoard, sixTile, null), 6));
         Thread sevenTileThread = new Thread(() -> updateBoard(match(gameBoard, sevenTile, null), 7));
         Thread eightTileThread = new Thread(() -> updateBoard(match(gameBoard, eightTile, null), 8));
+        Thread wrongFlagTileThread = new Thread(() -> {
+            ArrayList<Location> bomb_locations = match(gameBoard, wrongFlagTile, null);
+            wrong_flag_count = bomb_locations.size();
+            updateBoard(bomb_locations, -3);
+        });
 
         bombTileThread.start();
         unknownTileThread.start();
@@ -208,6 +288,7 @@ class ImageProcessor {
         sixTileThread.start();
         sevenTileThread.start();
         eightTileThread.start();
+        wrongFlagTileThread.start();
 
         try {
             bombTileThread.join();
@@ -222,9 +303,34 @@ class ImageProcessor {
             sixTileThread.join();
             sevenTileThread.join();
             eightTileThread.join();
+            wrongFlagTileThread.join();
         } catch (InterruptedException ignored) {
             throw new RuntimeException("update board interrupted");
         }
+
+//        if (getWrongFlagCount() != 0)
+//            try {
+//                int i = new Random().nextInt(1000);
+//                ImageIO.write(toBufferedImage(gameBoardBackup), "png", new File(i + ".wrong.before.png"));
+//                ImageIO.write(toBufferedImage(gameBoard), "png", new File(i + ".wrong.after.png"));
+//            } catch (IOException ignored) {
+//            }
+
+        gameBoardBackup = gameBoard;
+        if (updateBoardListener != null)
+            updateBoardListener.boardUpdated(board);
+
+        for (Tile[] tiles : board) {
+            for (Tile tile : tiles) {
+                Location location = tile.getLocation();
+                location.setThreshold(0);
+                tile.setLocation(location);
+            }
+        }
+    }
+
+    public int getBombCount() {
+        return bomb_count;
     }
 
     private void updateBoard(ArrayList<Location> tileLocations, int state) {
@@ -232,12 +338,35 @@ class ImageProcessor {
             TileLoop:
             for (Location approximateLocation : getApproximateLocations(tileLocation, 2))
                 for (Tile[] yTiles : board)
-                    for (Tile tile : yTiles)
-                        if (approximateLocation.equals(tile.getLocation())) {
-                            tile.setState(state);
-                            break TileLoop;
+                    for (Tile tile : yTiles) {
+                        Location location = tile.getLocation();
+                        if (approximateLocation.equals(location) && tile.getState() != state) {
+                            if (location.getThreshold() <= approximateLocation.getThreshold()) {
+                                location.setThreshold(approximateLocation.getThreshold());
+                                tile.setState(state);
+                                tile.setLocation(location);
+                                break TileLoop;
+                            }
                         }
+                    }
         }
+    }
+
+    public int getWrongFlagCount() {
+        return wrong_flag_count;
+    }
+
+    private List<Template> getTemplates(String name) {
+        List<Template> result = new ArrayList<>();
+        File dir = new File("resources\\" + name);
+        File[] files = dir.listFiles((dir1, filename) -> filename.endsWith(".png"));
+        if (files != null)
+            for (File file : files) {
+                String extension = file.getName().split("\\.")[1];
+                result.add(new Template(Imgcodecs.imread(file.getAbsolutePath())
+                        , extension.equals("png") ? DEFAULT_THRUSHOLD : Double.parseDouble("0." + extension)));
+            }
+        return result;
     }
 
     Tile[][] getBoard() {
@@ -265,17 +394,17 @@ class ImageProcessor {
         return process;
     }
 
-    private List<Template> getTemplates(String name) {
-        List<Template> result = new ArrayList<>();
-        File dir = new File("resources\\" + name);
-        File[] files = dir.listFiles((dir1, filename) -> filename.endsWith(".png"));
-        if (files != null)
-            for (File file : files) {
-                String extension = file.getName().split("\\.")[1];
-                result.add(new Template(Imgcodecs.imread(file.getAbsolutePath())
-                        , extension.equals("png") ? 0.8f : Float.parseFloat("0." + extension)));
-            }
-        return result;
+    private ArrayList<Location> getApproximateLocations(Location location, int accuracy) {
+        int i = location.getX();
+        int j = location.getY();
+
+        ArrayList<Location> locations = new ArrayList<>();
+
+        for (int w = -1 * accuracy; w < accuracy; w++)
+            for (int h = -1 * accuracy; h < accuracy; h++)
+                locations.add(new Location(i + w, j + h, location.getThreshold()));
+
+        return locations;
     }
 
     private boolean isZero(Mat mat, int i, int j, int accuracy) {
@@ -291,16 +420,28 @@ class ImageProcessor {
         return result;
     }
 
-    private ArrayList<Location> getApproximateLocations(Location location, int accuracy) {
-        int i = location.getX();
-        int j = location.getY();
+    private ArrayList<Location> match(Mat src, Template template, Color color) {
+        Mat templateGray = new Mat();
+        Imgproc.cvtColor(template.getTelmplate(), templateGray, Imgproc.COLOR_BGR2GRAY);
+        Mat srcGray = new Mat();
+        Imgproc.cvtColor(src, srcGray, Imgproc.COLOR_BGR2GRAY);
+        Mat res = new Mat();
+        Imgproc.matchTemplate(srcGray, templateGray, res, Imgproc.TM_CCOEFF_NORMED);
 
         ArrayList<Location> locations = new ArrayList<>();
 
-        for (int w = -1 * accuracy; w < accuracy; w++)
-            for (int h = -1 * accuracy; h < accuracy; h++)
-                locations.add(new Location(i + w, j + h));
-
+        for (int i = 0; i < res.width(); i++)
+            for (int j = 0; j < res.height(); j++) {
+                if (res.get(j, i)[0] > template.getThreshold()) {
+                    locations.add(new Location(i, j, res.get(j, i)[0]));
+                    if (color != null)
+                        Imgproc.circle(src
+                                , new Point(i + new Float(template.getTelmplate().width() / 2f).intValue()
+                                        , j + new Float(template.getTelmplate().height() / 2f).intValue())
+                                , 2
+                                , new Scalar(color.getRed(), color.getGreen(), color.getBlue()));
+                }
+            }
         return locations;
     }
 
@@ -329,39 +470,14 @@ class ImageProcessor {
         return result;
     }
 
-    private ArrayList<Location> match(Mat src, Template template, Color color) {
-        Mat templateGray = new Mat();
-        Imgproc.cvtColor(template.getTelmplate(), templateGray, Imgproc.COLOR_BGR2GRAY);
-        Mat srcGray = new Mat();
-        Imgproc.cvtColor(src, srcGray, Imgproc.COLOR_BGR2GRAY);
-        Mat res = new Mat();
-        Imgproc.matchTemplate(srcGray, templateGray, res, Imgproc.TM_CCOEFF_NORMED);
-
-        ArrayList<Location> locations = new ArrayList<>();
-
-        for (int i = 0; i < res.width(); i++)
-            for (int j = 0; j < res.height(); j++) {
-                if (res.get(j, i)[0] >= template.getThreshold()) {
-                    locations.add(new Location(i, j));
-                    if (color != null)
-                        Imgproc.circle(src
-                                , new Point(i + new Float(template.getTelmplate().width() / 2f).intValue()
-                                        , j + new Float(template.getTelmplate().height() / 2f).intValue())
-                                , 2
-                                , new Scalar(color.getRed(), color.getGreen(), color.getBlue()));
-                }
-            }
-        return locations;
-    }
-
     public Mat getScreenshot() {
-        gameLocationTL = null;
-        Location gameLocationBR = null;
         Mat gameBoard = null;
 
         WinDef.HWND hDesktop = User32.INSTANCE.GetDesktopWindow();
+        WinDef.RECT desktopRect = new WinDef.RECT();
         WinDef.RECT rect = new WinDef.RECT();
-        User32.INSTANCE.GetWindowRect(hDesktop, rect);
+        User32.INSTANCE.GetWindowRect(hDesktop, desktopRect);
+        User32.INSTANCE.GetWindowRect(gameHwnd, rect);
         BufferedImage screenshot = JNAScreenShot.getScreenshot(rect.toRectangle());
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try {
@@ -382,23 +498,17 @@ class ImageProcessor {
             gameBoard = Imgcodecs.imdecode(new MatOfByte(temporaryImageInMemory), Imgcodecs.IMREAD_COLOR);
         } catch (IOException ignored) {
         }
-        ratioX = rect.toRectangle().width / 1024f;
-        ratioY = rect.toRectangle().height / 768f;
-        Imgproc.resize(gameBoard, gameBoard, new Size(1024, 768));
-        Mat rangeMat = new Mat();
-        Core.inRange(gameBoard, new Scalar(192, 192, 192), new Scalar(192, 192, 192), rangeMat);
-        for (int i = 0; i < rangeMat.width(); i++)
-            for (int j = 0; j < rangeMat.height(); j++)
-                if (!isZero(rangeMat, i, j, 4))
-                    if (gameLocationTL == null)
-                        gameLocationTL = new Location(i, j);
-                    else
-                        gameLocationBR = new Location(i, j);
-        if (gameLocationBR == null || gameLocationTL == null)
-            throw new RuntimeException("I can't detect game :(");
-        gameBoard = new Mat(gameBoard, new Rect(gameLocationTL.getX(), gameLocationTL.getY()
-                , gameLocationBR.getX() - gameLocationTL.getX()
-                , gameLocationBR.getY() - gameLocationTL.getY()));
+        ratioX = desktopRect.toRectangle().width / 1024f;
+        ratioY = desktopRect.toRectangle().height / 768f;
+        Imgproc.resize(gameBoard, gameBoard, new Size(rect.toRectangle().width / ratioX, rect.toRectangle().height / ratioY));
+//        try {
+//            ImageIO.write(toBufferedImage(gameBoard), "png", new File("test." + ks++ + ".png"));
+//        } catch (IOException e) {
+//        }
         return gameBoard;
+    }
+
+    interface UpdateBoardListener {
+        void boardUpdated(Tile[][] board);
     }
 }

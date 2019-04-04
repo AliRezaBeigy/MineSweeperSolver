@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/MineSweeperSolver.iml" filepath="$PROJECT_DIR$/.idea/MineSweeperSolver.iml" />
+      <module fileurl="file://$PROJECT_DIR$/MineSweeperSolver.iml" filepath="$PROJECT_DIR$/MineSweeperSolver.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/MineSweeperSolver.main.iml" filepath="$PROJECT_DIR$/.idea/modules/MineSweeperSolver.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/MineSweeperSolver.test.iml" filepath="$PROJECT_DIR$/.idea/modules/MineSweeperSolver.test.iml" />
     </modules>
   </component>
 </project>

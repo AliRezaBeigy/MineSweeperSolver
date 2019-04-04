@@ -4,10 +4,12 @@ public class Location {
 
     private int x;
     private int y;
+    private double threshold;
 
-    Location(int x, int y) {
+    Location(int x, int y, double threshold) {
         this.x = x;
         this.y = y;
+        this.threshold = threshold;
     }
 
     public int getX() {
@@ -16,6 +18,14 @@ public class Location {
 
     public int getY() {
         return y;
+    }
+
+    public double getThreshold() {
+        return threshold;
+    }
+
+    public void setThreshold(double threshold) {
+        this.threshold = threshold;
     }
 
     @Override

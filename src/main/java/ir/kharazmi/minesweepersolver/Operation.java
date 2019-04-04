@@ -176,6 +176,10 @@ public class Operation {
 
     void update(ImageProcessor imageProcessor) {
         imageProcessor.updateBoard();
+        if (imageProcessor.getBombCount() != 0) {
+            imageProcessor.reset();
+            update(imageProcessor);
+        }
         int[][] t = imageProcessor.getTable();
         for (int i = 0; i < width; i++)
             System.arraycopy(t[i], 0, this.table[i], 0, height);
@@ -188,8 +192,10 @@ public class Operation {
             for (int j = 0; j < height; j++) {
                 if (table[i][j] == -1)
                     counter++;
-                if (counter == rand)
+                if (counter == rand) {
                     imageProcessor.click(i, j);
+                    System.out.println("Random needed: " + i + " " + j);
+                }
             }
         }
     }

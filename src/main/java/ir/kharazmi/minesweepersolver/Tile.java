@@ -13,11 +13,15 @@ public class Tile {
         return state;
     }
 
+    Location getLocation() {
+        return location;
+    }
+
     void setState(int state) {
         this.state = state;
     }
 
-    Location getLocation() {
-        return location;
+    public void setLocation(Location location) {
+        this.location = location;
     }
 }

@@ -1,6 +1,5 @@
 package ir.kharazmi.minesweepersolver;
 
-import javax.swing.*;
 import java.security.SecureRandom;
 
 public class Solver {
@@ -102,21 +101,11 @@ public class Solver {
                         break;
                 }
                 if (!find) {
-                    if (imageProcessor.getBombCount() != 0) {
-                        int confirm = JOptionPane.showConfirmDialog(null, "I lost the game, can i start again?", "Confirm", JOptionPane.YES_NO_OPTION);
-                        if (confirm == JOptionPane.YES_OPTION) {
-                            imageProcessor.reset();
-                            imageProcessor.updateBoard();
-                            new Solver(imageProcessor).solve();
-                            return;
-                        } else
-                            System.exit(1);
-                    }
                     if (mainOperation.remain() == 0) {
-                        System.out.println("win!!!");
+                        System.out.println("Win!");
                         break;
                     }
-                    System.out.println("random needed");
+                    //fuck this table
                     mainOperation.randomClick(imageProcessor);
                     mainOperation.update(imageProcessor);
                     mainOperation.mineFinder();

@@ -4,9 +4,9 @@ import org.opencv.core.Mat;
 
 class Template {
     private Mat telmplate;
-    private float threshold;
+    private double threshold;
 
-    Template(Mat telmplate, float threshold) {
+    Template(Mat telmplate, double threshold) {
         this.telmplate = telmplate;
         this.threshold = threshold;
     }
@@ -15,7 +15,7 @@ class Template {
         return telmplate;
     }
 
-    float getThreshold() {
+    double getThreshold() {
         return threshold;
     }
 }
