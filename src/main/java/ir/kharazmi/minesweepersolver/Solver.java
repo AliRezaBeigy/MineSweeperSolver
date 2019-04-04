@@ -102,14 +102,6 @@ public class Solver {
                         break;
                 }
                 if (!find) {
-                    if (mainOperation.remain() == 0) {
-                        System.out.println("win!!!");
-                        break;
-                    }
-                    //fuck this table
-                    System.out.println("random needed");
-                    mainOperation.randomClick(imageProcessor);
-                    mainOperation.update(imageProcessor);
                     if (imageProcessor.getBombCount() != 0) {
                         int confirm = JOptionPane.showConfirmDialog(null, "I lost the game, can i start again?", "Confirm", JOptionPane.YES_NO_OPTION);
                         if (confirm == JOptionPane.YES_OPTION) {
@@ -120,6 +112,13 @@ public class Solver {
                         } else
                             System.exit(1);
                     }
+                    if (mainOperation.remain() == 0) {
+                        System.out.println("win!!!");
+                        break;
+                    }
+                    System.out.println("random needed");
+                    mainOperation.randomClick(imageProcessor);
+                    mainOperation.update(imageProcessor);
                     mainOperation.mineFinder();
                     mainOperation.clickFinder();
                 }
