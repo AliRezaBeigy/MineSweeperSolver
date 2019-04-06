@@ -498,8 +498,8 @@ class ImageProcessor {
             gameBoard = Imgcodecs.imdecode(new MatOfByte(temporaryImageInMemory), Imgcodecs.IMREAD_COLOR);
         } catch (IOException ignored) {
         }
-        ratioX = desktopRect.toRectangle().width / 1024f;
-        ratioY = desktopRect.toRectangle().height / 768f;
+        ratioX = desktopRect.toRectangle().width / 728f;
+        ratioY = desktopRect.toRectangle().height / 546f;
         Imgproc.resize(gameBoard, gameBoard, new Size(rect.toRectangle().width / ratioX, rect.toRectangle().height / ratioY));
 //        try {
 //            ImageIO.write(toBufferedImage(gameBoard), "png", new File("test." + ks++ + ".png"));
