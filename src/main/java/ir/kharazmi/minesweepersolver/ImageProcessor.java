@@ -28,23 +28,22 @@ class ImageProcessor {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    final int ACCURACY_UNKNOWN_LOCATION = 3;
-    final double DEFAULT_THRUSHOLD = 0.8;
+    private final int ACCURACY_UNKNOWN_LOCATION = 3;
+    private final double DEFAULT_THRUSHOLD = 0.8;
 
-    int TileWidth;
-    int TileHeight;
+    private int TileWidth;
+    private int TileHeight;
 
     private double ratioX = 1;
     private double ratioY = 1;
 
     private int bomb_count;
-    private int wrong_flag_count;
+//    private int wrong_flag_count;
 
-    private Process process;
     private WinDef.HWND gameHwnd;
 
     private Tile[][] board;
-    private Mat gameBoardBackup;
+//    private Mat gameBoardBackup;
 
     private Location gameLocationTL;
 
@@ -65,9 +64,9 @@ class ImageProcessor {
 
     private UpdateBoardListener updateBoardListener;
 
-    private int ks;
+//    private int ks;
 
-    public void setUpdateBoardListener(UpdateBoardListener updateBoardListener) {
+    void setUpdateBoardListener(UpdateBoardListener updateBoardListener) {
         this.updateBoardListener = updateBoardListener;
     }
 
@@ -180,6 +179,7 @@ class ImageProcessor {
         return i;
     }
 
+    //Convert Mat to BufferedImage
     public BufferedImage toBufferedImage(Mat m) {
         int type = BufferedImage.TYPE_BYTE_GRAY;
         if (m.channels() > 1) {
@@ -192,12 +192,11 @@ class ImageProcessor {
         final byte[] targetPixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
         System.arraycopy(b, 0, targetPixels, 0, b.length);
         return image;
-
     }
 
     void startGame() {
         try {
-            process = Runtime.getRuntime().exec("resources\\Minesweeper.exe");
+            Process process = Runtime.getRuntime().exec("resources\\Minesweeper.exe");
             Thread.sleep(1000);
             Method pidMethod = process.getClass().getDeclaredMethod("pid");
             pidMethod.setAccessible(true);
@@ -248,12 +247,8 @@ class ImageProcessor {
 
     void click(int x, int y) {
         try {
+            moveMouse(x, y);
             Robot bot = new Robot();
-            Location tileLocation = board[x][y].getLocation();
-            bot.mouseMove(new Float(gameLocationTL.getX() + ((tileLocation.getX() + (TileWidth / 2f)) * ratioX)).intValue()
-                    , new Float(gameLocationTL.getY() + ((tileLocation.getY() + (TileHeight / 2f)) * ratioY)).intValue());
-//            bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-//            bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
         } catch (AWTException ignored) {
@@ -262,14 +257,19 @@ class ImageProcessor {
 
     void flag(int x, int y) {
         try {
+            moveMouse(x, y);
             Robot bot = new Robot();
-            Location tileLocation = board[x][y].getLocation();
-            bot.mouseMove(new Float(gameLocationTL.getX() + ((tileLocation.getX() + (TileWidth / 2f)) * ratioX)).intValue()
-                    , new Float(gameLocationTL.getY() + ((tileLocation.getY() + (TileHeight / 2f)) * ratioY)).intValue());
             bot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
         } catch (AWTException ignored) {
         }
+    }
+
+    private void moveMouse(int x, int y) throws AWTException {
+        Robot bot = new Robot();
+        Location tileLocation = board[x][y].getLocation();
+        bot.mouseMove(new Float(gameLocationTL.getX() + ((tileLocation.getX() + (TileWidth / 2f)) * ratioX)).intValue()
+                , new Float(gameLocationTL.getY() + ((tileLocation.getY() + (TileHeight / 2f)) * ratioY)).intValue());
     }
 
     void updateBoard() {
@@ -291,11 +291,11 @@ class ImageProcessor {
         Thread sixTileThread = new Thread(() -> updateBoard(match(gameBoard, sixTile, null), 6));
         Thread sevenTileThread = new Thread(() -> updateBoard(match(gameBoard, sevenTile, null), 7));
         Thread eightTileThread = new Thread(() -> updateBoard(match(gameBoard, eightTile, null), 8));
-        Thread wrongFlagTileThread = new Thread(() -> {
-            ArrayList<Location> bomb_locations = match(gameBoard, wrongFlagTile, null);
-            wrong_flag_count = bomb_locations.size();
-            updateBoard(bomb_locations, -3);
-        });
+//        Thread wrongFlagTileThread = new Thread(() -> {
+//            ArrayList<Location> bomb_locations = match(gameBoard, wrongFlagTile, null);
+//            wrong_flag_count = bomb_locations.size();
+//            updateBoard(bomb_locations, -3);
+//        });
 
         bombTileThread.start();
         unknownTileThread.start();
@@ -309,7 +309,7 @@ class ImageProcessor {
         sixTileThread.start();
         sevenTileThread.start();
         eightTileThread.start();
-        wrongFlagTileThread.start();
+//        wrongFlagTileThread.start();
 
         try {
             bombTileThread.join();
@@ -324,7 +324,7 @@ class ImageProcessor {
             sixTileThread.join();
             sevenTileThread.join();
             eightTileThread.join();
-            wrongFlagTileThread.join();
+//            wrongFlagTileThread.join();
         } catch (InterruptedException ignored) {
             throw new RuntimeException("update board interrupted");
         }
@@ -336,8 +336,8 @@ class ImageProcessor {
 //                ImageIO.write(toBufferedImage(gameBoard), "png", new File(i + ".wrong.after.png"));
 //            } catch (IOException ignored) {
 //            }
-
-        gameBoardBackup = gameBoard;
+//
+//        gameBoardBackup = gameBoard;
         if (updateBoardListener != null)
             updateBoardListener.boardUpdated(board);
 
@@ -350,7 +350,7 @@ class ImageProcessor {
         }
     }
 
-    public int getBombCount() {
+    int getBombCount() {
         return bomb_count;
     }
 
@@ -373,9 +373,9 @@ class ImageProcessor {
         }
     }
 
-    public int getWrongFlagCount() {
-        return wrong_flag_count;
-    }
+//    public int getWrongFlagCount() {
+//        return wrong_flag_count;
+//    }
 
     private List<Template> getTemplates(String name) {
         List<Template> result = new ArrayList<>();
@@ -411,10 +411,6 @@ class ImageProcessor {
         return ret;
     }
 
-    Process getProcess() {
-        return process;
-    }
-
     private ArrayList<Location> getApproximateLocations(Location location, int accuracy) {
         int i = location.getX();
         int j = location.getY();
@@ -426,19 +422,6 @@ class ImageProcessor {
                 locations.add(new Location(i + w, j + h, location.getThreshold()));
 
         return locations;
-    }
-
-    private boolean isZero(Mat mat, int i, int j, int accuracy) {
-        boolean result = true;
-        for (int w = -1 * accuracy; w < accuracy; w++)
-            try {
-                double[] point = mat.get(j, i + w);
-                result = point == null || point.length <= 0 || point[0] == 0;
-                if (result)
-                    return result;
-            } catch (Exception ignored) {
-            }
-        return result;
     }
 
     private ArrayList<Location> match(Mat src, Template template, Color color) {
@@ -491,7 +474,7 @@ class ImageProcessor {
         return result;
     }
 
-    public Mat getScreenshot() {
+    private Mat getScreenshot() {
         try {
             Thread.sleep(500);
         } catch (InterruptedException ignored) {
