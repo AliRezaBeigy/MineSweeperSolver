@@ -250,8 +250,9 @@ class ImageProcessor {
             moveMouse(x, y);
             Robot bot = new Robot();
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+            Thread.sleep(150);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-        } catch (AWTException ignored) {
+        } catch (AWTException | InterruptedException ignored) {
         }
     }
 
@@ -260,8 +261,9 @@ class ImageProcessor {
             moveMouse(x, y);
             Robot bot = new Robot();
             bot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
+            Thread.sleep(150);
             bot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
-        } catch (AWTException ignored) {
+        } catch (AWTException | InterruptedException ignored) {
         }
     }
 
