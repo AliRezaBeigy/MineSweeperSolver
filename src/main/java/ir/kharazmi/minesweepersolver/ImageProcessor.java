@@ -2,7 +2,6 @@ package ir.kharazmi.minesweepersolver;
 
 import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.ptr.IntByReference;
-import org.opencv.core.Point;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -21,20 +20,21 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 class ImageProcessor {
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    final int ACCURACY_UNKNOWN_LOCATION = 1;
+    final int ACCURACY_UNKNOWN_LOCATION = 3;
     final double DEFAULT_THRUSHOLD = 0.8;
 
     int TileWidth;
     int TileHeight;
 
-    private float ratioX = 1;
-    private float ratioY = 1;
+    private double ratioX = 1;
+    private double ratioY = 1;
 
     private int bomb_count;
     private int wrong_flag_count;
@@ -64,7 +64,7 @@ class ImageProcessor {
 
     private UpdateBoardListener updateBoardListener;
 
-//    private int ks;
+    private int ks;
 
     public void setUpdateBoardListener(UpdateBoardListener updateBoardListener) {
         this.updateBoardListener = updateBoardListener;
@@ -87,13 +87,13 @@ class ImageProcessor {
         wrongFlagTile = getTemplates("wrong_flag");
 
         Mat gameBoard = getScreenshot();
-        ArrayList<Location> boarder_locations = match(gameBoard, unknownTile, Color.red);
+        ArrayList<Location> boarder_locations = match(gameBoard, unknownTile, Color.blue);
 
         ArrayList<Location> locations = new ArrayList<>();
         for (Location boarder_location : boarder_locations) {
             boolean exist = false;
             for (Location approximateLocation : getApproximateLocations(boarder_location, ACCURACY_UNKNOWN_LOCATION))
-                if (boarder_locations.contains(approximateLocation) && !approximateLocation.equals(boarder_location))
+                if (locations.contains(approximateLocation))
                     exist = true;
             if (!exist)
                 locations.add(boarder_location);
@@ -101,11 +101,23 @@ class ImageProcessor {
 
         ArrayList<Integer> xs = new ArrayList<>();
         for (Location location : locations)
-            if (!xs.contains(location.getX()) && !xs.contains(location.getX() - 1) && !xs.contains(location.getX() + 1))
+            if (!xs.contains(location.getX())
+                    && !xs.contains(location.getX() - 1)
+                    && !xs.contains(location.getX() + 1)
+                    && !xs.contains(location.getX() - 2)
+                    && !xs.contains(location.getX() + 2)
+                    && !xs.contains(location.getX() - 3)
+                    && !xs.contains(location.getX() + 3))
                 xs.add(location.getX());
         ArrayList<Integer> ys = new ArrayList<>();
         for (Location location : locations)
-            if (!ys.contains(location.getY()) && !ys.contains(location.getY() - 1) && !ys.contains(location.getY() + 1))
+            if (!ys.contains(location.getY())
+                    && !ys.contains(location.getY() - 1)
+                    && !ys.contains(location.getY() + 1)
+                    && !ys.contains(location.getY() - 2)
+                    && !ys.contains(location.getY() + 2)
+                    && !ys.contains(location.getY() - 3)
+                    && !ys.contains(location.getY() + 3))
                 ys.add(location.getY());
 
         for (int i = 0; i < xs.size(); i++) {
@@ -114,11 +126,11 @@ class ImageProcessor {
             for (Location location : locations) {
                 if (location.getX() == x) {
                     xCount++;
-                    if (xCount > 2)
+                    if (xCount > 3)
                         break;
                 }
             }
-            if (xCount <= 2) {
+            if (xCount <= 3) {
                 xs.remove(x);
                 i--;
             }
@@ -129,11 +141,11 @@ class ImageProcessor {
             for (Location location : locations) {
                 if (location.getY() == y) {
                     yCount++;
-                    if (yCount > 2)
+                    if (yCount > 3)
                         break;
                 }
             }
-            if (yCount <= 2) {
+            if (yCount <= 3) {
                 ys.remove(y);
                 i--;
             }
@@ -184,26 +196,34 @@ class ImageProcessor {
 
     void startGame() {
         try {
-            process = Runtime.getRuntime().exec("resources\\game.exe");
+            process = Runtime.getRuntime().exec("resources\\Minesweeper.exe");
             Thread.sleep(1000);
             Method pidMethod = process.getClass().getDeclaredMethod("pid");
             pidMethod.setAccessible(true);
             Long pid = (Long) pidMethod.invoke(process);
 
+            AtomicReference<WinDef.RECT> tempRect = new AtomicReference<>();
             final User32 user32 = User32.INSTANCE;
-            user32.EnumWindows((hWnd, arg1) -> {
-                IntByReference intByReference = new IntByReference(0);
-                user32.GetWindowThreadProcessId(hWnd, intByReference);
+            WinDef.HWND hwnd = null;
 
-                WinDef.RECT rect = new WinDef.RECT();
-                if (pid.intValue() == intByReference.getValue() && gameLocationTL == null) {
-                    gameHwnd = hWnd;
-                    User32.INSTANCE.GetWindowRect(hWnd, rect);
-                    gameLocationTL = new Location(rect.left, rect.top, 0);
+            do {
+                hwnd = user32.FindWindowEx(null, hwnd, null, null);
+                IntByReference intByReference = new IntByReference(0);
+                user32.GetWindowThreadProcessId(hwnd, intByReference);
+                if (pid.intValue() == intByReference.getValue()) {
+                    WinDef.RECT rect = new WinDef.RECT();
+                    User32.INSTANCE.GetWindowRect(hwnd, rect);
+                    if (tempRect.get() == null
+                            || ((tempRect.get().bottom - tempRect.get().top) < (rect.bottom - rect.top))) {
+                        gameHwnd = hwnd;
+                        tempRect.set(rect);
+                        gameLocationTL = new Location(rect.left, rect.top, 0);
+                    }
                 }
-                return true;
-            }, null);
-        } catch (IOException | InterruptedException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
+            }
+            while (hwnd != null);
+        } catch (IOException | InterruptedException | NoSuchMethodException | IllegalAccessException | InvocationTargetException
+                ignored) {
         }
     }
 
@@ -231,8 +251,8 @@ class ImageProcessor {
             Location tileLocation = board[x][y].getLocation();
             bot.mouseMove(new Float(gameLocationTL.getX() + ((tileLocation.getX() + (TileWidth / 2f)) * ratioX)).intValue()
                     , new Float(gameLocationTL.getY() + ((tileLocation.getY() + (TileHeight / 2f)) * ratioY)).intValue());
-            bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-            bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+//            bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+//            bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
         } catch (AWTException ignored) {
@@ -260,7 +280,7 @@ class ImageProcessor {
             updateBoard(bomb_locations, -3);
         });
         Thread unknownTileThread = new Thread(() -> updateBoard(match(gameBoard, unknownTile, Color.blue), -1));
-        Thread emptyTileThread = new Thread(() -> updateBoard(match(gameBoard, emptyTile, null), 0));
+        Thread emptyTileThread = new Thread(() -> updateBoard(match(gameBoard, emptyTile, Color.GRAY), 0));
         Thread flagTileThread = new Thread(() -> updateBoard(match(gameBoard, flagTile, null), -2));
         Thread oneTileThread = new Thread(() -> updateBoard(match(gameBoard, oneTile, null), 1));
         Thread twoTileThread = new Thread(() -> updateBoard(match(gameBoard, twoTile, null), 2));
@@ -340,7 +360,7 @@ class ImageProcessor {
                 for (Tile[] yTiles : board)
                     for (Tile tile : yTiles) {
                         Location location = tile.getLocation();
-                        if (approximateLocation.equals(location) && tile.getState() != state) {
+                        if (approximateLocation.equals(location)) {
                             if (location.getThreshold() <= approximateLocation.getThreshold()) {
                                 location.setThreshold(approximateLocation.getThreshold());
                                 tile.setState(state);
@@ -471,6 +491,11 @@ class ImageProcessor {
     }
 
     public Mat getScreenshot() {
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException ignored) {
+        }
+
         Mat gameBoard = null;
 
         WinDef.HWND hDesktop = User32.INSTANCE.GetDesktopWindow();
@@ -498,13 +523,13 @@ class ImageProcessor {
             gameBoard = Imgcodecs.imdecode(new MatOfByte(temporaryImageInMemory), Imgcodecs.IMREAD_COLOR);
         } catch (IOException ignored) {
         }
-        ratioX = desktopRect.toRectangle().width / 728f;
-        ratioY = desktopRect.toRectangle().height / 546f;
+        ratioX = desktopRect.toRectangle().width / 1023.9999698823528; //desktopRect.toRectangle().width * 90.666664 / rect.toRectangle().width
+        ratioY = desktopRect.toRectangle().height / 768.0000234375001; //desktopRect.toRectangle().height *( 182.04445 / rect.toRectangle().height)
         Imgproc.resize(gameBoard, gameBoard, new Size(rect.toRectangle().width / ratioX, rect.toRectangle().height / ratioY));
-//        try {
-//            ImageIO.write(toBufferedImage(gameBoard), "png", new File("test." + ks++ + ".png"));
-//        } catch (IOException e) {
-//        }
+        try {
+            ImageIO.write(toBufferedImage(gameBoard), "png", new File("test." + ks++ + ".png"));
+        } catch (IOException e) {
+        }
         return gameBoard;
     }
 
