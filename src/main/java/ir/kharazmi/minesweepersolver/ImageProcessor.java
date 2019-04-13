@@ -124,10 +124,12 @@ class ImageProcessor {
             Integer x = xs.get(i);
             int xCount = 0;
             for (Location location : locations) {
-                if (location.getX() == x) {
-                    xCount++;
-                    if (xCount > 3)
-                        break;
+                for (Integer approximatePosition : getApproximatePositions(location.getX(), 1)) {
+                    if (location.getX() == approximatePosition) {
+                        xCount++;
+                        if (xCount > 3)
+                            break;
+                    }
                 }
             }
             if (xCount <= 3) {
@@ -139,10 +141,12 @@ class ImageProcessor {
             Integer y = ys.get(i);
             int yCount = 0;
             for (Location location : locations) {
-                if (location.getY() == y) {
-                    yCount++;
-                    if (yCount > 3)
-                        break;
+                for (Integer approximatePosition : getApproximatePositions(location.getY(), 1)) {
+                    if (location.getY() == approximatePosition) {
+                        yCount++;
+                        if (yCount > 3)
+                            break;
+                    }
                 }
             }
             if (yCount <= 3) {
@@ -426,6 +430,15 @@ class ImageProcessor {
         return locations;
     }
 
+    private ArrayList<Integer> getApproximatePositions(Integer position, int accuracy) {
+        ArrayList<Integer> positions = new ArrayList<>();
+
+        for (int w = -1 * accuracy; w < accuracy; w++)
+            positions.add(position + w);
+
+        return positions;
+    }
+
     private ArrayList<Location> match(Mat src, Template template, Color color) {
         Mat templateGray = new Mat();
         Imgproc.cvtColor(template.getTelmplate(), templateGray, Imgproc.COLOR_BGR2GRAY);
@@ -509,8 +522,8 @@ class ImageProcessor {
             gameBoard = Imgcodecs.imdecode(new MatOfByte(temporaryImageInMemory), Imgcodecs.IMREAD_COLOR);
         } catch (IOException ignored) {
         }
-        ratioX = desktopRect.toRectangle().width / 1023.9999698823528; //desktopRect.toRectangle().width * 90.666664 / rect.toRectangle().width
-        ratioY = desktopRect.toRectangle().height / 768.0000234375001; //desktopRect.toRectangle().height *( 182.04445 / rect.toRectangle().height)
+        ratioX = desktopRect.toRectangle().width / 728f; //desktopRect.toRectangle().width * 90.666664 / rect.toRectangle().width
+        ratioY = desktopRect.toRectangle().height / 546f; //desktopRect.toRectangle().height *( 182.04445 / rect.toRectangle().height)
         Imgproc.resize(gameBoard, gameBoard, new Size(rect.toRectangle().width / ratioX, rect.toRectangle().height / ratioY));
 //        try {
 //            ImageIO.write(toBufferedImage(gameBoard), "png", new File("test." + ks++ + ".png"));
